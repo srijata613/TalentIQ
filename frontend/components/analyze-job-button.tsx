@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { analyzeJob } from "@/actions/analyze-job";
+import {
+  analyzeJobPdf,
+} from "@/actions/analyze-job-pdf";
 
 export default function AnalyzeJobButton({
   jobId,
@@ -16,10 +19,23 @@ export default function AnalyzeJobButton({
     try {
       setLoading(true);
 
-      await analyzeJob(
-        jobId,
-        content
-      );
+      if (
+        content &&
+        content.length > 0
+      ) {
+        
+        await analyzeJob(
+          jobId,
+          content
+        );
+      
+      } else {
+        
+        await analyzeJobPdf(
+          jobId
+        );
+      
+      }
 
       window.location.reload();
     } finally {

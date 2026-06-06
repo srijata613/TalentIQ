@@ -38,11 +38,255 @@ FIELD_KEYWORDS = [
     "information technology"
 ]
 
+DOMAIN_KEYWORDS = {
+    "machine learning": [
+        "machine learning",
+        "deep learning",
+        "pytorch",
+        "tensorflow",
+        "scikit-learn",
+    ],
+
+    "nlp": [
+        "nlp",
+        "natural language processing",
+        "transformers",
+        "hugging face",
+        "llm",
+        "rag",
+        "langchain",
+    ],
+
+    "computer vision": [
+        "computer vision",
+        "opencv",
+        "image processing",
+    ],
+
+    "data engineering": [
+        "data engineering",
+        "etl",
+        "airflow",
+        "spark",
+        "hadoop",
+    ],
+
+    "backend engineering": [
+        "fastapi",
+        "django",
+        "flask",
+        "node.js",
+        "microservices",
+    ],
+
+    "cloud engineering": [
+        "aws",
+        "azure",
+        "gcp",
+        "docker",
+        "kubernetes",
+    ],
+
+    "frontend engineering": [
+        "react",
+        "next.js",
+        "vue",
+        "angular",
+    ],
+
+    "cybersecurity": [
+        "cybersecurity",
+        "penetration testing",
+        "ethical hacking",
+        "owasp",
+    ]
+}
 # skills
-TECH_SKILLS = {
-    "programming": ["python", "java", "c++", "javascript", "sql"],
-    "ml_ai": ["machine learning", "deep learning", "pytorch", "tensorflow", "nlp", "computer vision"],
-    "backend": ["fastapi", "django", "flask", "node.js", "rest api", "microservices"],
-    "cloud_devops": ["aws", "gcp", "azure", "docker", "kubernetes"],
-    "data": ["pandas", "numpy", "scikit-learn", "data analysis", "data engineering"]
+SKILL_TAXONOMY = {
+
+    "programming": [
+        "python",
+        "java",
+        "c",
+        "c++",
+        "c#",
+        "javascript",
+        "typescript",
+        "go",
+        "rust",
+        "kotlin",
+        "swift",
+        "php",
+        "ruby",
+        "scala",
+        "r",
+        "matlab",
+        "sql",
+        "perl",
+        "bash",
+    ],
+
+    "frontend": [
+        "html",
+        "css",
+        "sass",
+        "bootstrap",
+        "tailwind",
+        "javascript",
+        "typescript",
+        "react",
+        "next.js",
+        "vue",
+        "nuxt",
+        "angular",
+        "redux",
+        "jquery",
+    ],
+
+    "backend": [
+        "fastapi",
+        "django",
+        "flask",
+        "node.js",
+        "express",
+        "spring boot",
+        "laravel",
+        "asp.net",
+        "graphql",
+        "rest api",
+        "microservices",
+    ],
+
+    "mobile": [
+        "android",
+        "ios",
+        "flutter",
+        "react native",
+        "kotlin",
+        "swift",
+        "xamarin",
+    ],
+
+    "database": [
+        "sql",
+        "mysql",
+        "postgresql",
+        "mongodb",
+        "sqlite",
+        "redis",
+        "oracle",
+        "cassandra",
+        "dynamodb",
+        "firebase",
+        "supabase",
+    ],
+
+    "cloud": [
+        "aws",
+        "azure",
+        "gcp",
+        "amazon web services",
+        "google cloud",
+        "ec2",
+        "s3",
+        "lambda",
+        "eks",
+        "ecs",
+        "cloudformation",
+    ],
+
+    "devops": [
+        "docker",
+        "kubernetes",
+        "terraform",
+        "jenkins",
+        "ansible",
+        "github actions",
+        "gitlab ci",
+        "ci/cd",
+        "helm",
+        "nginx",
+    ],
+
+    "data": [
+        "pandas",
+        "numpy",
+        "data analysis",
+        "data engineering",
+        "data visualization",
+        "tableau",
+        "power bi",
+        "etl",
+        "spark",
+        "hadoop",
+        "airflow",
+    ],
+
+    "ml_ai": [
+        "machine learning",
+        "deep learning",
+        "nlp",
+        "computer vision",
+        "transformers",
+        "hugging face",
+        "langchain",
+        "llm",
+        "rag",
+        "fine tuning",
+        "lora",
+        "pytorch",
+        "tensorflow",
+        "keras",
+        "scikit-learn",
+        "xgboost",
+        "lightgbm",
+        "opencv",
+    ],
+
+    "security": [
+        "cybersecurity",
+        "penetration testing",
+        "ethical hacking",
+        "owasp",
+        "siem",
+        "soc",
+        "iam",
+        "oauth",
+        "jwt",
+    ],
+
+    "tools": [
+        "git",
+        "github",
+        "gitlab",
+        "jira",
+        "confluence",
+        "postman",
+        "swagger",
+        "figma",
+        "streamlit",
+        "mlflow",
+        "databricks",
+        "snowflake",
+    ],
+
+    "soft_skills": [
+        "communication",
+        "written communication",
+        "verbal communication",
+        "leadership",
+        "teamwork",
+        "collaboration",
+        "problem solving",
+        "critical thinking",
+        "analytical thinking",
+        "adaptability",
+        "stakeholder management",
+        "time management",
+        "ownership",
+        "initiative",
+        "mentoring",
+        "negotiation",
+        "presentation",
+    ]
 }
