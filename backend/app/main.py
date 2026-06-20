@@ -15,6 +15,7 @@ from app.routes.jobs import router as jobs_router
 from pydantic import BaseModel
 from src.resume_parser import parse_resume
 
+
 app = FastAPI(
     title="AI Resume Ranking Engine",
     description="Semantic, priority-aware resume–job matching system with explainable scoring.",
@@ -34,6 +35,8 @@ app.include_router(
     prefix="/jobs",
     tags=["jobs"]
 )
+
+
 
 class RankingRequest(BaseModel):
     job_description: str

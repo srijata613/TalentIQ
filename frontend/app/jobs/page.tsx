@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getJobs } from "@/actions/get-jobs";
+import CloneJobButton from "@/components/clone-job-button";
 
 export default async function JobsPage() {
   const jobs = await getJobs();
@@ -26,19 +27,28 @@ export default async function JobsPage() {
           </div>
         ) : (
           jobs.map((job: any) => (
-            <Link
+            <div
               key={job.id}
-              href={`/jobs/${job.id}`}
-              className="block border rounded-xl p-6 hover:bg-gray-50"
+              className="border rounded-xl p-6"
             >
-              <h2 className="text-xl font-semibold">
-                {job.title}
-              </h2>
+              <Link
+                href={`/jobs/${job.id}`}
+              >
+                <h2 className="text-xl font-semibold">
+                  {job.title}
+                </h2>
 
-              <p className="text-sm text-gray-500 mt-2">
-                Status: {job.status}
-              </p>
-            </Link>
+                <p className="text-sm text-gray-500 mt-2">
+                  Status: {job.status}
+                </p>
+              </Link>
+
+              <div className="mt-4">
+                <CloneJobButton
+                  jobId={job.id}
+                />
+              </div>
+            </div>
           ))
         )}
       </div>

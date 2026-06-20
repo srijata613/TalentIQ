@@ -52,20 +52,73 @@ export async function analyzeCandidate(
     }
   );
 
+  if (!response.ok) {
+  throw new Error(
+    `Resume analysis failed: ${response.status}`
+  );
+}
+
   const result =
     await response.json();
 
   await supabase
-    .from("candidates")
-    .update({
-      parsed_name: result.name,
-      parsed_email: result.email,
-      parsed_phone: result.phone,
-      parsed_skills: result.skills,
-      resume_text: result.resume_text,
-      status: "parsed",
-    })
-    .eq("id", candidateId);
+  .from("candidates")
+  .update({
+    parsed_name:
+      result.identity?.name,
+
+    parsed_email:
+      result.identity?.email,
+
+    parsed_phone:
+      result.identity?.phone,
+
+    parsed_linkedin:
+      result.identity?.linkedin,
+
+    parsed_github:
+      result.identity?.github,
+
+    parsed_portfolio:
+      result.identity?.portfolio,
+
+    parsed_skills:
+      result.skills ?? [],
+
+    parsed_degrees:
+      result.education?.degrees ?? [],
+
+    parsed_graduation_years:
+      result.education?.graduation_years ?? [],
+
+    parsed_designations:
+      result.experience?.designations ?? [],
+
+    parsed_projects:
+      result.projects ?? [],
+
+    parsed_certifications:
+      result.certifications ?? [],
+
+    parsed_achievements:
+      result.achievements ?? [],
+
+    parsed_summary:
+      result.summary,
+
+    parsed_experience_years:
+      result.experience_years,
+
+    resume_text:
+      result.resume_text,
+
+    status:
+      "parsed",
+  })
+  .eq(
+    "id",
+    candidateId
+  );
 
   return result;
 }

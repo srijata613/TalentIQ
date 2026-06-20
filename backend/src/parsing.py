@@ -69,6 +69,20 @@ CERTIFICATION_HEADERS = [
     "courses & certifications",
 ]
 
+HIDDEN_REQUIREMENTS = [
+    "ownership",
+    "initiative",
+    "stakeholder management",
+    "leadership",
+    "mentoring",
+    "presentation",
+    "self starter",
+    "self-starter",
+    "cross functional",
+    "client facing",
+    "adaptability",
+]
+
 # Flatten Taxonomy
 
 def flatten_skill_dict(skill_dict):
@@ -613,3 +627,123 @@ def detect_missing_requirements(
         )
 
     return missing
+
+# hidden requirements
+def detect_hidden_requirements(text):
+
+    text_lower = text.lower()
+
+    return [
+        req
+        for req in HIDDEN_REQUIREMENTS
+        if req in text_lower
+    ]
+
+
+def extract_semantic_requirements(text):
+
+    sentences = sent_tokenize(text)
+
+    semantic = []
+
+    patterns = [
+        "build",
+        "design",
+        "develop",
+        "deploy",
+        "maintain",
+        "lead",
+        "optimize",
+        "architect",
+    ]
+
+    for sentence in sentences:
+
+        lower = sentence.lower()
+
+        if any(
+            pattern in lower
+            for pattern in patterns
+        ):
+            semantic.append(
+                sentence.strip()
+            )
+
+    return semantic[:10]
+
+
+def benchmark_salary(
+    seniority
+):
+
+    ranges = {
+        "intern":
+            {"min": 0, "max": 5},
+
+        "junior":
+            {"min": 5, "max": 12},
+
+        "associate":
+            {"min": 8, "max": 15},
+
+        "mid":
+            {"min": 12, "max": 25},
+
+        "senior":
+            {"min": 25, "max": 50},
+
+        "lead":
+            {"min": 40, "max": 70},
+
+        "manager":
+            {"min": 50, "max": 90},
+
+        "director":
+            {"min": 80, "max": 150},
+    }
+
+    return ranges.get(
+        seniority,
+        {}
+    )
+
+
+def detect_skill_gaps(
+    technologies
+):
+
+    gaps = []
+
+    cloud = {
+        "aws",
+        "azure",
+        "gcp",
+    }
+
+    databases = {
+        "sql",
+        "postgresql",
+        "mysql",
+        "mongodb",
+        "snowflake",
+    }
+
+    tech_set = set(
+        technologies
+    )
+
+    if not tech_set.intersection(
+        cloud
+    ):
+        gaps.append(
+            "No cloud platform specified"
+        )
+
+    if not tech_set.intersection(
+        databases
+    ):
+        gaps.append(
+            "No database technology specified"
+        )
+
+    return gaps

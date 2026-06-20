@@ -90,6 +90,24 @@ export async function analyzeJob(
 
         readability_score:
           result.readability_score,
+
+        hidden_requirements:
+          result.hidden_requirements ?? [],
+
+        semantic_requirements:
+          result.semantic_requirements ?? [],
+
+        missing_requirements:
+          result.missing_requirements ?? [],
+
+        duplicate_requirements:
+          result.duplicate_requirements ?? [],
+
+        skill_gaps:
+          result.skill_gaps ?? [],
+
+        salary_benchmark:
+          result.salary_benchmark ?? {},
       },
       {
         onConflict: "job_id",

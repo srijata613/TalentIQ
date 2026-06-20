@@ -26,6 +26,12 @@ from src.parsing import (
     classify_must_have,
     classify_nice_to_have,
     readability_score,
+    detect_hidden_requirements,
+    extract_semantic_requirements,
+    detect_missing_requirements,
+    detect_duplicate_requirements,
+    detect_skill_gaps,
+    benchmark_salary,
 )
 
 router = APIRouter()
@@ -49,6 +55,22 @@ def analyze_job(request: AnalyzeRequest):
     required_skills = extract_skills_dictionary(
         request.content,
         TECHNICAL_SKILLS
+    )
+    
+    experience = extract_experience_requirement(
+        request.content
+    )
+    
+    education = extract_education_requirement(
+        request.content
+    )
+    
+    seniority = extract_seniority(
+        request.content
+    )
+    
+    technologies = extract_technologies(
+        request.content
     )
 
     return {
@@ -128,6 +150,38 @@ def analyze_job(request: AnalyzeRequest):
             readability_score(
                 request.content
             ),
+            
+            "hidden_requirements":
+                detect_hidden_requirements(
+                    request.content
+            ),
+
+            "semantic_requirements":
+                extract_semantic_requirements(
+                    request.content
+           ),
+
+            "missing_requirements":
+                detect_missing_requirements(
+                    experience,
+                    education,
+                    required_skills
+            ),
+
+            "duplicate_requirements":
+                detect_duplicate_requirements(
+                    required_skills
+            ),
+
+            "skill_gaps":
+                detect_skill_gaps(
+                    technologies
+            ),
+
+            "salary_benchmark":
+                benchmark_salary(
+                    seniority
+    ),
     }
 
 

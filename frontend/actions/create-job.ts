@@ -36,6 +36,7 @@ export async function createJob(
     .insert({
       organization_id: membership.organization_id,
       title,
+      content: description,
     })
     .select()
     .single();

@@ -1,5 +1,6 @@
 import { getJob } from "@/actions/get-job";
 import AnalyzeJobButton from "@/components/analyze-job-button";
+import Link from "next/link";
 
 export default async function JobDetailPage({
   params,
@@ -37,6 +38,23 @@ export default async function JobDetailPage({
           jobId={job.id}
           content={versions?.[0]?.content ?? ""}
         />
+      </div>
+
+      {/* Matches Button */}
+      <div className="mt-4">
+        <Link
+          href={`/jobs/${job.id}/matches`}
+          className="
+          inline-block
+          px-4
+          py-2
+          bg-blue-600
+          text-white
+          rounded-lg
+          "
+        >
+          View Candidate Matches
+        </Link>
       </div>
 
       {/* Extracted Skills */}
