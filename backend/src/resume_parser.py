@@ -5,6 +5,13 @@ from .parsing import (
     ALL_SKILLS,
 )
 
+from .intelligence import (
+    detect_behavioral_signals,
+    detect_implicit_skills,
+    estimate_adaptability,
+    estimate_growth_potential,
+    build_candidate_graph,
+)
 
 EMAIL_REGEX = (
     r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
@@ -26,7 +33,7 @@ PORTFOLIO_REGEX = (
     r"https?://(?!.*linkedin)(?!.*github)[^\s]+"
 )
 
-YEAR_REGEX = re.findall(YEAR_REGEX, text)
+YEAR_REGEX = (r"\b(?:19|20)\d{2}\b")
 
 CGPA_REGEX = r'(?:cgpa|gpa)\s*[:\-]?\s*(\d+(?:\.\d+)?)'
 
@@ -229,9 +236,13 @@ def extract_experience_years(text):
 def extract_location(lines):
 
     for line in lines[:10]:
-
-        if "," in line:
-            return line
+        
+        if (
+            "," in line
+            and len(line.split()) <=8
+        ):
+            return line.strip(
+        )
 
     return None
 
@@ -426,6 +437,30 @@ def parse_resume(text: str):
         text,
         ALL_SKILLS
     )
+    
+    behavioral_signals = (
+        detect_behavioral_signals(
+            text
+        )
+    )
+    
+    inferred_skills = (
+        detect_implicit_skills(
+            skills
+        )
+    )
+    
+    adaptability_score = (
+        estimate_adaptability(
+            text
+        )
+    )
+    
+    growth_score = (
+        estimate_growth_potential(
+            text
+        )
+    )
 
     # Education
 
@@ -482,7 +517,17 @@ def parse_resume(text: str):
     
     open_source = extract_open_source(lines)
     
-
+    candidate_graph = (
+        build_candidate_graph(
+            {
+                "skills": skills,
+                "projects": projects,
+                "certifications": certifications,
+                "companies": companies,
+            }
+        )
+    )
+    
 
     return {
 
@@ -557,4 +602,14 @@ def parse_resume(text: str):
         "publications": publications,
         
         "open_source": open_source,
+        
+        "behavioral_signals": behavioral_signals,
+        
+        "inferred_skills": inferred_skills,
+        
+        "adaptability_score": adaptability_score,
+        
+        "growth_score": growth_score,
+        
+        "candidate_graph": candidate_graph,
     }

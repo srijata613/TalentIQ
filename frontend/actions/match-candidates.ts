@@ -1,94 +1,92 @@
 "use server";
 
 import { createSupabaseServerClient }
-  from "@/lib/supabase-server";
+from "@/lib/supabase-server";
 
 export async function matchCandidates(
   jobId: string
 ) {
+
   const supabase =
     createSupabaseServerClient();
 
-  const { data: versions } =
+  const { data: job } =
+    await supabase
+      .from("jobs")
+      .select("*")
+      .eq("id", jobId)
+      .single();
+
+  const { data: version } =
     await supabase
       .from("job_versions")
       .select("*")
       .eq("job_id", jobId)
       .order(
         "version_number",
-        {
-          ascending: false,
-        }
+        { ascending: false }
       )
-      .limit(1);
-
-  const jobContent =
-    versions?.[0]?.content;
-
-  if (!jobContent) {
-    throw new Error(
-      "Job description not found"
-    );
-  }
+      .limit(1)
+      .single();
 
   const { data: candidates } =
     await supabase
       .from("candidates")
       .select("*")
-      .eq("status", "parsed")
-      .not(
-        "resume_text",
-        "is",
-        null
+      .eq(
+        "organization_id",
+        job.organization_id
       );
 
-  if (!candidates?.length) {
-    return [];
+  if (
+    !version ||
+    !candidates
+  ) {
+    return;
   }
 
-  const response = await fetch(
-    "http://127.0.0.1:8000/rank",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type":
-          "application/json",
-      },
-      body: JSON.stringify({
-        job_description:
-          jobContent,
+  for (
+    const candidate
+    of candidates
+  ) {
 
-        resumes:
-          candidates.map(
-            (c) =>
-              c.resume_text
-          ),
-      }),
+    if (
+      !candidate.resume_text
+    ) {
+      continue;
     }
-  );
 
-  if (!response.ok) {
-    throw new Error(
-      "Ranking failed"
-    );
+    const response =
+      await fetch(
+        "http://127.0.0.1:8000/match",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            job_text:
+              version.content,
+            resume_text:
+              candidate.resume_text,
+          }),
+        }
+      );
+
+    const result =
+      await response.json();
+
+    await supabase
+      .from(
+        "candidate_matches"
+      )
+      .upsert({
+        job_id: jobId,
+        candidate_id:
+          candidate.id,
+
+        ...result,
+      });
   }
-
-  const rankingResult =
-    await response.json();
-
-  const results =
-    rankingResult.results ?? [];
-
-  return results.map(
-    (
-      result: any,
-      index: number
-    ) => ({
-      candidate:
-        candidates[index],
-
-      ranking:
-        result,
-    })
-  );
 }

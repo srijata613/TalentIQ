@@ -10,11 +10,44 @@ import requests
 from src.pdf_extractor import extract_pdf_text
 
 from src.ranker import rank_candidates
+
 from app.routes.jobs import router as jobs_router
 
 from pydantic import BaseModel
 from src.resume_parser import parse_resume
+from src.comparison import (
+    compare_candidates,
+    shortlist_candidates,
+    generate_hiring_recommendation,
+)
 
+from app.routes.matching import (
+    router as matching_router
+)
+
+from app.routes import (
+    shortlisting
+)
+
+from app.routes import interview
+
+from app.routes import search
+
+from app.routes import (
+    semantic_search
+)
+
+from app.routes import (
+    clustering
+)
+
+from app.routes import duplicates
+
+from app.routes import (
+    duplicate_resolution
+)
+
+from app.routes import copilot
 
 app = FastAPI(
     title="AI Resume Ranking Engine",
@@ -36,7 +69,43 @@ app.include_router(
     tags=["jobs"]
 )
 
+app.include_router(
+    matching_router,
+    tags=["matching"]
+)
 
+app.include_router(
+    shortlisting.router,
+    tags=["Shortlisting"]
+)
+
+app.include_router(
+    interview.router,
+    tags=["Interview"]
+)
+
+app.include_router(
+    search.router,
+    tags=["Search"]
+)
+
+app.include_router(
+    semantic_search.router
+)
+
+app.include_router(
+    clustering.router
+)
+
+app.include_router(
+    duplicates.router
+)
+
+app.include_router(
+    duplicate_resolution.router
+)
+
+app.include_router(copilot.router)
 
 class RankingRequest(BaseModel):
     job_description: str
@@ -51,6 +120,12 @@ class ResumeParseRequest(BaseModel):
 
 class ResumeUrlRequest(BaseModel):
     pdf_url: str
+
+class ComparisonRequest(
+    BaseModel
+):
+    job_description: str
+    resumes: List[str]
 
 @app.post("/rank", response_model=RankingResponse)
 def rank(request: RankingRequest):
@@ -74,6 +149,36 @@ def rank(request: RankingRequest):
         "results": results
     }
 
+@app.post("/compare")
+def compare(
+    request: ComparisonRequest
+):
+
+    results = compare_candidates(
+        request.job_description,
+        request.resumes
+    )
+
+    shortlisted = (
+        shortlist_candidates(
+            results
+        )
+    )
+
+    for candidate in results:
+
+        candidate[
+            "hiring_recommendation"
+        ] = (
+            generate_hiring_recommendation(
+                candidate
+            )
+        )
+
+    return {
+        "ranking": results,
+        "shortlisted": shortlisted,
+    }
 
 @app.get("/health")
 def health():

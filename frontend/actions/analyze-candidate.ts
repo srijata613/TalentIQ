@@ -112,6 +112,21 @@ export async function analyzeCandidate(
     resume_text:
       result.resume_text,
 
+    behavioral_signals:
+      result.behavioral_signals ?? {},
+    
+    inferred_skills:
+      result.inferred_skills ?? [],
+
+    adaptability_score:
+      result.adaptability_score,
+
+    growth_score:
+      result.growth_score,
+
+    candidate_graph:
+      result.candidate_graph ?? {},
+
     status:
       "parsed",
   })

@@ -83,6 +83,25 @@ HIDDEN_REQUIREMENTS = [
     "adaptability",
 ]
 
+UNIVERSITY_KEYWORDS = [
+    "university",
+    "institute",
+    "college",
+    "iit",
+    "nit",
+    "iiit",
+]
+
+COMPANY_SUFFIXES = [
+    "inc",
+    "ltd",
+    "llc",
+    "technologies",
+    "systems",
+    "solutions",
+    "labs",
+]
+
 # Flatten Taxonomy
 
 def flatten_skill_dict(skill_dict):
@@ -747,3 +766,103 @@ def detect_skill_gaps(
         )
 
     return gaps
+
+def extract_location(text):
+
+    lines = text.splitlines()
+
+    for line in lines[:10]:
+
+        if "," in line:
+
+            if len(line.split()) <= 8:
+                return line.strip()
+
+    return None
+
+
+def extract_universities(text):
+
+    results = []
+
+    for line in text.splitlines():
+
+        lower = line.lower()
+
+        if any(
+            keyword in lower
+            for keyword in UNIVERSITY_KEYWORDS
+        ):
+            results.append(
+                line.strip()
+            )
+
+    return list(set(results))
+
+
+def extract_cgpa(text):
+
+    patterns = [
+        r'cgpa[: ]+(\d+\.\d+)',
+        r'gpa[: ]+(\d+\.\d+)',
+        r'(\d+\.\d+)\s*/\s*10'
+    ]
+
+    for pattern in patterns:
+
+        match = re.search(
+            pattern,
+            text,
+            re.IGNORECASE
+        )
+
+        if match:
+            return float(
+                match.group(1)
+            )
+
+    return None
+
+
+def extract_companies(text):
+
+    companies = []
+
+    lines = text.splitlines()
+
+    for line in lines:
+
+        lower = line.lower()
+
+        if any(
+            suffix in lower
+            for suffix in COMPANY_SUFFIXES
+        ):
+            companies.append(
+                line.strip()
+            )
+
+    return list(set(companies))
+
+
+def extract_leadership_signals(text):
+
+    signals = []
+
+    leadership_terms = [
+        "lead",
+        "led",
+        "leadership",
+        "mentor",
+        "managed",
+        "owner",
+    ]
+
+    text_lower = text.lower()
+
+    for term in leadership_terms:
+
+        if term in text_lower:
+            signals.append(term)
+
+    return list(set(signals))

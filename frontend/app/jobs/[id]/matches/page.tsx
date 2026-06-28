@@ -1,7 +1,7 @@
-import { matchCandidates }
-  from "@/actions/match-candidates";
+import { getJobMatches }
+  from "@/actions/get-job-matches";
 
-export default async function MatchesPage({
+export default async function JobMatchesPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -11,115 +11,184 @@ export default async function MatchesPage({
     await params;
 
   const matches =
-    await matchCandidates(id);
+    await getJobMatches(id);
 
   return (
-    <main className="p-8 max-w-6xl">
+    <main className="min-h-screen p-8 max-w-7xl">
 
-      <h1 className="text-4xl font-bold mb-8">
-        Candidate Matches
+      <h1 className="text-4xl font-bold">
+        Candidate Rankings
       </h1>
 
-      <div className="space-y-6">
+      <div className="mt-8 space-y-4">
 
         {matches.map(
-          (
-            match: any,
-            index: number
-          ) => (
+          (match: any, index) => (
 
             <div
-              key={index}
+              key={match.id}
               className="border rounded-xl p-6"
             >
 
-              <h2 className="text-2xl font-semibold">
-                {
-                  match.candidate
-                    .parsed_name
-                }
-              </h2>
+              <div className="flex justify-between">
 
-              <div className="mt-3">
+                <div>
 
-                <p>
-                  Final Score:
+                  <h2 className="text-xl font-semibold">
+
+                    #{index + 1}
+
+                    {" "}
+
+                    {match.candidates
+                      ?.parsed_name ??
+                      "Unknown Candidate"}
+
+                  </h2>
+
+                  <p className="text-gray-500">
+                    {
+                      match.candidates
+                        ?.parsed_email
+                    }
+                  </p>
+
+                </div>
+
+                <div className="text-right">
+
+                  <div className="text-3xl font-bold">
+
+                    {(
+                      match.final_score *
+                      100
+                    ).toFixed(1)}
+                    %
+
+                  </div>
+
+                  <div>
+                    Grade:
+                    {" "}
+                    {match.grade}
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div className="mt-4">
+
+                <span
+                  className="
+                    px-3
+                    py-1
+                    bg-green-100
+                    rounded-full
+                  "
+                >
+                  {
+                    match.recommendation
+                  }
+                </span>
+
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+
+                <div>
+                  Skill:
                   {" "}
                   {(
-                    match.ranking
-                      .final_score *
+                    match.skill_score *
                     100
-                  ).toFixed(1)}
+                  ).toFixed(0)}
                   %
-                </p>
+                </div>
 
-                <p>
-                  Grade:
+                <div>
+                  Experience:
                   {" "}
-                  {
-                    match.ranking
-                      .grade
-                  }
-                </p>
+                  {(
+                    match.experience_score *
+                    100
+                  ).toFixed(0)}
+                  %
+                </div>
 
-                <p>
-                  Recommendation:
+                <div>
+                  Domain:
                   {" "}
-                  {
-                    match.ranking
-                      .recommendation
-                  }
-                </p>
+                  {(
+                    match.domain_score *
+                    100
+                  ).toFixed(0)}
+                  %
+                </div>
+
+                <div>
+                  Leadership:
+                  {" "}
+                  {(
+                    match.leadership_score *
+                    100
+                  ).toFixed(0)}
+                  %
+                </div>
+
+              </div>
+
+              <div className="mt-6">
+
+                <h3 className="font-semibold">
+                  Strengths
+                </h3>
+
+                <ul className="list-disc pl-6">
+
+                  {(
+                    match.strengths ??
+                    []
+                  ).map(
+                    (
+                      item: string
+                    ) => (
+                      <li
+                        key={item}
+                      >
+                        {item}
+                      </li>
+                    )
+                  )}
+
+                </ul>
 
               </div>
 
               <div className="mt-4">
 
                 <h3 className="font-semibold">
-                  Matched Skills
+                  Weaknesses
                 </h3>
 
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {match.ranking
-                    .matched_skills
-                    ?.map(
-                      (
-                        skill: string
-                      ) => (
-                        <span
-                          key={skill}
-                          className="px-2 py-1 bg-green-100 rounded-full"
-                        >
-                          {skill}
-                        </span>
-                      )
-                    )}
-                </div>
+                <ul className="list-disc pl-6">
 
-              </div>
+                  {(
+                    match.weaknesses ??
+                    []
+                  ).map(
+                    (
+                      item: string
+                    ) => (
+                      <li
+                        key={item}
+                      >
+                        {item}
+                      </li>
+                    )
+                  )}
 
-              <div className="mt-4">
-
-                <h3 className="font-semibold">
-                  Missing Skills
-                </h3>
-
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {match.ranking
-                    .missing_skills
-                    ?.map(
-                      (
-                        skill: string
-                      ) => (
-                        <span
-                          key={skill}
-                          className="px-2 py-1 bg-red-100 rounded-full"
-                        >
-                          {skill}
-                        </span>
-                      )
-                    )}
-                </div>
+                </ul>
 
               </div>
 

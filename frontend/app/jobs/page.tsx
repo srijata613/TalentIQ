@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getJobs } from "@/actions/get-jobs";
 import CloneJobButton from "@/components/clone-job-button";
+import RunMatchingButton from "@/components/run-matching-button";
 
 export default async function JobsPage() {
   const jobs = await getJobs();
@@ -45,6 +46,9 @@ export default async function JobsPage() {
 
               <div className="mt-4">
                 <CloneJobButton
+                  jobId={job.id}
+                />
+                <RunMatchingButton
                   jobId={job.id}
                 />
               </div>
