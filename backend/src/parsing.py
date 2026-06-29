@@ -2,35 +2,38 @@ import re
 from nltk.tokenize import sent_tokenize
 
 from .config import (
-    SKILL_TAXONOMY,
     DOMAIN_KEYWORDS,
+)
+
+from src.knowledge_graph.services.taxonomy_service import (
+    TaxonomyService,
 )
 
 # Taxonomy Helpers
 
-SOFT_SKILLS = SKILL_TAXONOMY["soft_skills"]
+taxonomy = TaxonomyService()
 
-TOOLS = SKILL_TAXONOMY["tools"]
+SOFT_SKILLS = taxonomy.get_category(
+    "soft_skills"
+)
+
+TOOLS = taxonomy.get_category(
+    "tools"
+)
 
 TECHNOLOGIES = (
-    SKILL_TAXONOMY["programming"]
-    + SKILL_TAXONOMY["frontend"]
-    + SKILL_TAXONOMY["backend"]
-    + SKILL_TAXONOMY["database"]
-    + SKILL_TAXONOMY["cloud"]
-    + SKILL_TAXONOMY["devops"]
-    + SKILL_TAXONOMY["ml_ai"]
+    taxonomy.get_category("programming")
+    + taxonomy.get_category("frontend")
+    + taxonomy.get_category("backend")
+    + taxonomy.get_category("database")
+    + taxonomy.get_category("cloud")
+    + taxonomy.get_category("devops")
+    + taxonomy.get_category("ml_ai")
 )
 
 TECHNICAL_SKILLS = (
-    SKILL_TAXONOMY["programming"]
-    + SKILL_TAXONOMY["frontend"]
-    + SKILL_TAXONOMY["backend"]
-    + SKILL_TAXONOMY["database"]
-    + SKILL_TAXONOMY["cloud"]
-    + SKILL_TAXONOMY["devops"]
-    + SKILL_TAXONOMY["ml_ai"]
-    + SKILL_TAXONOMY["tools"]
+    TECHNOLOGIES
+    + taxonomy.get_category("tools")
 )
 
 INDUSTRIES = [
@@ -101,22 +104,6 @@ COMPANY_SUFFIXES = [
     "solutions",
     "labs",
 ]
-
-# Flatten Taxonomy
-
-def flatten_skill_dict(skill_dict):
-    skills = []
-
-    for category in skill_dict.values():
-        skills.extend(category)
-
-    return list(set(skills))
-
-
-ALL_SKILLS = flatten_skill_dict(
-    SKILL_TAXONOMY
-)
-
 
 # Generic Skill Extraction
 
