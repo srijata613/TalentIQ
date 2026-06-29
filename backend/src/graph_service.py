@@ -1,151 +1,196 @@
-from collections import defaultdict
+from __future__ import annotations
+
+from typing import Dict, List
 
 
-def build_candidate_graph(
-    candidate
-):
+class GraphService:
+    
+    def build_candidate_graph(
+        self,
+        candidate: Dict
+    ) -> Dict:
 
-    skills = candidate.get(
-        "skills",
-        []
-    )
+        nodes = []
+        edges = []
 
-    projects = candidate.get(
-        "projects",
-        []
-    )
+        candidate_id = (
+            candidate.get(
+                "id"
+            )
+            or "candidate"
+        )
 
-    certifications = candidate.get(
-        "certifications",
-        []
-    )
+        candidate_name = (
+            candidate.get(
+                "parsed_name"
+            )
+            or "Unknown Candidate"
+        )
 
-    companies = candidate.get(
-        "companies",
-        []
-    )
+        nodes.append({
 
-    designations = candidate.get(
-        "designations",
-        []
-    )
+            "id": candidate_id,
 
-    graph = {
+            "type": "candidate",
 
-        "nodes": [],
-        "edges": [],
-        "career_timeline": [],
-        "skill_evolution": {},
-    }
+            "label": candidate_name
 
-    # Skill Nodes
-    for skill in skills:
-
-        graph["nodes"].append({
-
-            "id": skill,
-            "type": "skill",
         })
 
-    # Project Nodes
-    for project in projects:
+        self._add_entities(
 
-        graph["nodes"].append({
+            nodes,
+            edges,
 
-            "id": project,
-            "type": "project",
-        })
+            candidate_id,
 
-        for skill in skills:
+            candidate.get(
+                "parsed_skills",
+                []
+            ),
 
-            if (
-                skill.lower()
-                in project.lower()
-            ):
+            "skill",
 
-                graph["edges"].append({
+            "HAS_SKILL"
 
-                    "source": skill,
-                    "target": project,
-                    "relationship":
-                        "skill_to_project",
-                })
+        )
 
-    # Certification Nodes
-    for cert in certifications:
+        self._add_entities(
 
-        graph["nodes"].append({
+            nodes,
+            edges,
 
-            "id": cert,
-            "type":
-                "certification",
-        })
+            candidate_id,
 
-        for skill in skills:
+            candidate.get(
+                "parsed_companies",
+                []
+            ),
 
-            if (
-                skill.lower()
-                in cert.lower()
-            ):
+            "company",
 
-                graph["edges"].append({
-                    "source": skill,
-                    "target": cert,
-                    "relationship":
-                        "skill_to_certification",
-                })
+            "WORKED_AT"
 
-    # Company Nodes
-    for company in companies:
+        )
 
-        graph["nodes"].append({
-            "id": company,
-            "type": "company",
-        })
+        self._add_entities(
 
-        for skill in skills:
+            nodes,
+            edges,
 
-            graph["edges"].append({
-                "source": skill,
-                "target": company,
-                "relationship":
-                    "skill_to_company",
-            })
+            candidate_id,
 
-    # Career Timeline
-    for idx, designation in enumerate(
-        designations
+            candidate.get(
+                "parsed_universities",
+                []
+            ),
+
+            "university",
+
+            "STUDIED_AT"
+
+        )
+
+        self._add_entities(
+
+            nodes,
+            edges,
+
+            candidate_id,
+
+            candidate.get(
+                "parsed_certifications",
+                []
+            ),
+
+            "certification",
+
+            "HAS_CERTIFICATION"
+
+        )
+
+        return {
+
+            "nodes": nodes,
+
+            "edges": edges
+
+        }
+
+    def _add_entities(
+
+        self,
+
+        nodes: List[Dict],
+
+        edges: List[Dict],
+
+        candidate_id: str,
+
+        values: List,
+
+        node_type: str,
+
+        relationship: str
+
     ):
 
-        graph[
-            "career_timeline"
-        ].append({
-            "step":
-                idx + 1,
-            "role":
-                designation,
-        })
+        if not values:
+            return
 
-    # Skill Evolution
-    evolution = defaultdict(list)
+        seen = {
 
-    for idx, designation in enumerate(
-        designations
-    ):
+            node["id"]
 
-        for skill in skills:
+            for node in nodes
 
-            evolution[
-                skill
-            ].append({
-                "career_stage":
-                    designation,
-                "order":
-                    idx + 1,
+        }
+
+        for value in values:
+
+            if not value:
+                continue
+
+            if isinstance(
+                value,
+                dict
+            ):
+                label = (
+                    value.get(
+                        "name"
+                    )
+                    or str(value)
+                )
+            else:
+                label = str(value)
+
+            node_id = (
+                f"{node_type}:"
+                f"{label.lower()}"
+            )
+
+            if node_id not in seen:
+
+                nodes.append({
+
+                    "id": node_id,
+
+                    "type": node_type,
+
+                    "label": label
+
+                })
+
+                seen.add(
+                    node_id
+                )
+
+            edges.append({
+
+                "source": candidate_id,
+
+                "target": node_id,
+
+                "relationship": relationship
+
             })
-
-    graph[
-        "skill_evolution"
-    ] = dict(evolution)
-
-    return graph
