@@ -15,7 +15,7 @@ from .resume_quality import (
     detect_keyword_stuffing,
 )
 
-from .knowledge_graph import (
+from .graph_service import (
     build_candidate_graph
 )
 

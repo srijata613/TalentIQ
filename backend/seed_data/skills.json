@@ -1,0 +1,243 @@
+[
+  {
+    "canonical_name": "Python",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "General-purpose programming language widely used for backend development, automation, data science, artificial intelligence, and scripting.",
+    "aliases": [
+      "python",
+      "py",
+      "python3",
+      "python 3"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "Java",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Object-oriented programming language commonly used for enterprise applications and Android development.",
+    "aliases": [
+      "java"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "JavaScript",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Programming language used for web development across browsers and server-side environments.",
+    "aliases": [
+      "javascript",
+      "js",
+      "ecmascript"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "TypeScript",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Strongly typed superset of JavaScript designed for scalable applications.",
+    "aliases": [
+      "typescript",
+      "ts"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "C",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "General-purpose procedural programming language used for systems programming.",
+    "aliases": [
+      "c"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "C++",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "High-performance programming language supporting object-oriented and generic programming.",
+    "aliases": [
+      "c++",
+      "cpp"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "C#",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Modern object-oriented programming language developed for the .NET platform.",
+    "aliases": [
+      "c#",
+      "csharp"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "Go",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Compiled programming language designed by Google for scalable backend systems.",
+    "aliases": [
+      "go",
+      "golang"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "Rust",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Systems programming language focused on memory safety and performance.",
+    "aliases": [
+      "rust"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "Kotlin",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Modern JVM language widely used for Android and backend development.",
+    "aliases": [
+      "kotlin"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "Swift",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Programming language developed by Apple for iOS, macOS, and related platforms.",
+    "aliases": [
+      "swift"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "PHP",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Server-side scripting language commonly used for web applications.",
+    "aliases": [
+      "php"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "Ruby",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Dynamic programming language known for developer productivity and web development.",
+    "aliases": [
+      "ruby"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "Scala",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Programming language combining object-oriented and functional programming paradigms.",
+    "aliases": [
+      "scala"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "R",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Programming language designed for statistical computing and data analysis.",
+    "aliases": [
+      "r",
+      "r language"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "MATLAB",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Programming and numerical computing platform widely used in engineering and research.",
+    "aliases": [
+      "matlab"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "SQL",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Structured Query Language used for querying and managing relational databases.",
+    "aliases": [
+      "sql",
+      "structured query language"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "Perl",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "High-level programming language commonly used for scripting and text processing.",
+    "aliases": [
+      "perl"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  },
+  {
+    "canonical_name": "Bash",
+    "entity_type": "skill",
+    "category": "Programming Language",
+    "description": "Unix shell scripting language used for automation and system administration.",
+    "aliases": [
+      "bash",
+      "bash scripting",
+      "shell scripting"
+    ],
+    "metadata": {
+      "source": "internal"
+    }
+  }
+]
