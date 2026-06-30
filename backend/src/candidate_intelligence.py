@@ -3,20 +3,11 @@ from .intelligence import (
     detect_implicit_skills,
 )
 
-from .parsing import (
-    extract_skills_dictionary,
-    ALL_SKILLS,
-)
-
 from .resume_quality import (
     analyze_section_coverage,
     calculate_resume_completeness,
     calculate_resume_quality_score,
     detect_keyword_stuffing,
-)
-
-from .graph_service import (
-    build_candidate_graph
 )
 
 def estimate_skill_proficiency(
@@ -141,35 +132,39 @@ def estimate_collaboration_score(
 
 
 def build_candidate_intelligence(
-    jd_text,
-    resume_text
+    candidate: dict,
+    jd_skills: list | None = None
 ):
-
-    explicit_skills = (
-        extract_skills_dictionary(
-            resume_text,
-            ALL_SKILLS
-        )
+    
+    resume_text = candidate.get(
+        "resume_text",
+        ""
     )
 
-    jd_skills = (
-        extract_skills_dictionary(
-            jd_text,
-            ALL_SKILLS
-        )
+    explicit_skills = candidate.get(
+        "parsed_skills",
+        []
     )
 
-    behavioral = (
-        detect_behavioral_signals(
-            resume_text
-        )
-    )
+    jd_skills = jd_skills or []
 
-    inferred_skills = (
-        detect_implicit_skills(
-            explicit_skills
-        )
+    behavioral = candidate.get(
+        "behavioral_signals",
+        {}
     )
+    
+    if not behavioral:
+        behavioral = detect_behavioral_signals(
+            candidate.get(
+                "resume_text",
+                ""
+            )
+        )
+
+    inferred_skills = detect_implicit_skills(
+            explicit_skills 
+    )
+    
     
     coverage = (
         analyze_section_coverage(
@@ -194,21 +189,6 @@ def build_candidate_intelligence(
             completeness,
             stuffing
         )
-    )
-    
-    graph = build_candidate_graph(
-        {
-            "skills":
-                explicit_skills,
-            "projects":
-                [],
-            "certifications":
-                [],
-            "companies":
-                [],
-            "designations":
-                []
-        }
     )
 
     result = {
@@ -265,11 +245,7 @@ def build_candidate_intelligence(
             "keyword_stuffing": stuffing,
             "completeness": completeness,
             "quality_score": quality_score,
-        },
-        
-        "knowledge_graph": graph
+        }
     }
-    
-    print(result)
-    
+        
     return result
