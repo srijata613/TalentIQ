@@ -1,21 +1,66 @@
-from typing import List, Dict
-from .evaluator import evaluate_candidate
+from __future__ import annotations
+
+from copy import deepcopy
+from typing import Dict, List
+
+from src.candidate_pipeline import (
+    CandidatePipeline,
+)
 
 
-# ranking function
-def rank_candidates(jd_text: str, resumes: List[str]) -> List[Dict]:
+class Ranker:
 
-    results = []
+    def __init__(self):
 
-    for idx, resume_text in enumerate(resumes):
-        result = evaluate_candidate(jd_text, resume_text)
-        result["candidate_id"] = f"candidate_{idx + 1}"
-        results.append(result)
+        self.pipeline = CandidatePipeline()
 
-    ranked_results = sorted(
-        results,
-        key=lambda x: x["final_score"],
-        reverse=True
+    def rank(
+        self,
+        candidates: List[Dict],
+        jd_text: str = "",
+    ) -> List[Dict]:
+
+        ranked = []
+
+        for candidate in candidates:
+
+            processed = self.pipeline.process(
+                deepcopy(candidate),
+                jd_text,
+            )
+
+            processed["final_score"] = (
+                processed[
+                    "candidate_match"
+                ].overall_score
+            )
+
+            ranked.append(
+                processed
+            )
+
+        ranked.sort(
+
+            key=lambda c: c[
+                "final_score"
+            ],
+
+            reverse=True,
+
+        )
+
+        return ranked
+
+
+ranker = Ranker()
+
+
+def rank_candidates(
+    candidates: List[Dict],
+    jd_text: str = "",
+):
+
+    return ranker.rank(
+        candidates,
+        jd_text,
     )
-
-    return ranked_results

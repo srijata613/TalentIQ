@@ -3,6 +3,11 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Dict
 
+from src.llm.parser import parse_job_with_llm
+from src.parsing import (
+    ALL_SKILLS,
+    extract_skills_dictionary,
+)
 from src.graph_service import GraphService
 from src.risk_assessment import calculate_risk_score
 from src.recommendations import generate_recommendations
@@ -14,11 +19,17 @@ from src.candidate_profile_generator import (
     CandidateProfileGenerator,
 )
 
+from src.matching.matcher import (
+    Matcher,
+)
+
 class CandidatePipeline:
 
     def __init__(self):
 
         self.graph_service = GraphService()
+        
+        self.matcher = Matcher()
         
         self.profile_generator = (
             CandidateProfileGenerator()
@@ -35,16 +46,21 @@ class CandidatePipeline:
         self._build_graph(candidate)
 
         self._calculate_risk(candidate)
+        
+        self._match_candidate(
+            candidate,
+            jd_text,
+        )
 
         self._generate_recommendations(
             candidate
         )
-
+        
         self._candidate_intelligence(
             candidate,
             jd_text,
         )
-        
+                
         self._generate_ai_profile(
             candidate
         )
@@ -100,6 +116,43 @@ class CandidatePipeline:
 
         candidate.update(
             intelligence
+        )
+        
+    def _match_candidate(
+        self,
+        candidate: Dict,
+        jd_text: str,
+    ):
+
+        try:
+            job = parse_job_with_llm(jd_text)
+            
+        except Exception:
+            job = {
+                
+                "content": jd_text,
+                "required_skills": extract_skills_dictionary(
+                    jd_text,
+                    ALL_SKILLS,
+                ),
+                
+                "preferred_skills": [],
+                "experience_years": 0,
+                "education": [],
+                "certifications": [],
+                "responsibilities": [],
+                "technologies": [],
+                "tools": [],
+                "industry": None,
+                "domain": None,
+                "seniority": None,
+            }
+
+        candidate["candidate_match"] = (
+            self.matcher.match(
+                candidate,
+                job,
+            )
         )
         
     def _generate_ai_profile(

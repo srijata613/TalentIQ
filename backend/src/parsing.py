@@ -36,6 +36,13 @@ TECHNICAL_SKILLS = (
     + taxonomy.get_category("tools")
 )
 
+ALL_SKILLS = sorted(
+    set(
+        TECHNICAL_SKILLS
+        + SOFT_SKILLS
+    )
+)
+
 INDUSTRIES = [
     "healthcare",
     "finance",

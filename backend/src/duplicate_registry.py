@@ -16,12 +16,12 @@ def create_merge_record(
 
         "candidate_a":
             candidate_a.get(
-                "name"
+                "parsed_name",
             ),
 
         "candidate_b":
             candidate_b.get(
-                "name"
+                "parsed_name",
             ),
 
         "similarity_score":
@@ -43,7 +43,7 @@ def create_archive_record(
 
         "candidate":
             archived_candidate.get(
-                "name"
+                "parsed_name"
             ),
 
         "archived_at":

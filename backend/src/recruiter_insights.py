@@ -1,71 +1,202 @@
-from .risk_assessment import (
-    calculate_risk_score,
-    risk_level,
-)
+from typing import Dict, List
 
 
-def build_recruiter_insights(
-    candidate,
-    evaluation
-):
+class RecruiterInsights:
+    def build(
+        self,
+        explanation: Dict,
+        summary: Dict,
+    ) -> Dict:
 
-    risk_data = (
-        calculate_risk_score(
-            candidate
-        )
-    )
-
-    risk_score = (risk_data["risk_score"])
-    risk = (risk_data["risk_level"])
-
-    strengths = evaluation.get(
-        "strengths",
-        []
-    )[:3]
-
-    concerns = evaluation.get(
-        "weaknesses",
-        []
-    )[:3]
-
-    interview_focus = []
-
-    if evaluation.get(
-        "missing_skills"
-    ):
-        interview_focus.append(
-            "Validate missing skills"
+        recommendation = explanation.get(
+            "hiring_recommendation",
+            {}
         )
 
-    if risk != "Low":
-        interview_focus.append(
-            "Review career consistency"
+        confidence = explanation.get(
+            "confidence",
+            {}
         )
 
-    hire_decision = bool(
-        float(
-            evaluation["final_score"]
-        ) >= 0.70
-    )
+        return {
 
-    insights = {
-        "hire":
-            hire_decision,    
+            "key_takeaways":
+                self._key_takeaways(
+                    explanation,
+                    summary,
+                ),
 
-        "risk_score":
-            float(risk_score),
+            "positive_signals":
+                self._positive_signals(
+                    explanation,
+                ),
 
-        "risk_level":
-            risk,
+            "risk_flags":
+                self._risk_flags(
+                    explanation,
+                ),
 
-        "top_strengths":
-            strengths,
+            "interview_priorities":
+                self._interview_priorities(
+                    explanation,
+                ),
 
-        "top_concerns":
-            concerns,
+            "decision_support": {
 
-        "interview_focus_areas":
-            interview_focus,
-    }
-    print("INSIGHTS:", insights)
-    return insights
+                "decision":
+                    recommendation.get(
+                        "decision",
+                        "Unknown",
+                    ),
+
+                "priority":
+                    recommendation.get(
+                        "priority",
+                        "Medium",
+                    ),
+
+                "confidence":
+                    confidence.get(
+                        "level",
+                        "Unknown",
+                    ),
+            },
+        }
+
+    def _key_takeaways(
+        self,
+        explanation: Dict,
+        summary: Dict,
+    ) -> List[str]:
+
+        takeaways = [
+
+            summary.get(
+                "executive_summary",
+                ""
+            )
+        ]
+
+        strengths = summary.get(
+            "top_strengths",
+            []
+        )
+
+        if strengths:
+
+            takeaways.append(
+
+                "Strongest areas: "
+                + ", ".join(
+                    strengths[:3]
+                )
+
+            )
+
+        gaps = summary.get(
+            "top_gaps",
+            []
+        )
+
+        if gaps:
+
+            takeaways.append(
+
+                "Primary gaps: "
+                + ", ".join(
+                    gaps[:3]
+                )
+
+            )
+
+        return takeaways
+
+    def _positive_signals(
+        self,
+        explanation: Dict,
+    ) -> List[str]:
+
+        signals = []
+
+        for feature in explanation.get(
+            "feature_attribution",
+            []
+        ):
+
+            if feature.get(
+                "impact"
+            ) in (
+                "Strong Positive",
+                "Positive",
+            ):
+
+                signals.append(
+
+                    f"{feature['feature']} "
+                    f"({feature['score']:.2f})"
+
+                )
+
+        return signals
+
+    def _risk_flags(
+        self,
+        explanation: Dict,
+    ) -> List[str]:
+
+        flags = []
+
+        for gap in explanation.get(
+            "gaps",
+            []
+        ):
+
+            items = gap.get(
+                "items",
+                []
+            )
+
+            if items:
+
+                flags.append(
+
+                    f"{gap['category']}: "
+                    + ", ".join(items)
+
+                )
+
+        return flags
+
+    def _interview_priorities(
+        self,
+        explanation: Dict,
+    ) -> List[Dict]:
+
+        priorities = []
+
+        for item in explanation.get(
+            "interview_focus",
+            []
+        ):
+
+            priorities.append({
+
+                "category":
+                    item.get(
+                        "category"
+                    ),
+
+                "topics":
+                    item.get(
+                        "topics",
+                        [],
+                    ),
+
+                "reason":
+                    item.get(
+                        "reason",
+                        "",
+                    ),
+            })
+
+        return priorities

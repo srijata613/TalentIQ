@@ -86,7 +86,11 @@ def compute_skill_match_weighted(jd_text, jd_skills, resume_skills):
             else SKILL_THRESHOLD_NORMAL
         )
 
-        max_sim = sim_matrix[i].max() if sim_matrix.shape[1] > 0 else 0.0
+        max_sim = (
+            float(sim_matrix[i].max())
+            if sim_matrix.shape[1] > 0
+            else 0.0
+        )
 
         if max_sim >= threshold:
             matched.append(original_skill)
@@ -100,4 +104,4 @@ def compute_skill_match_weighted(jd_text, jd_skills, resume_skills):
         else 0.0
     )
 
-    return skill_score, matched, missing
+    return float(skill_score), matched, missing

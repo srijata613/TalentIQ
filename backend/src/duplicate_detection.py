@@ -4,7 +4,7 @@ from .embeddings import (
     embed_texts,
     cosine_similarity_matrix
 )
-
+from .config import DUPLICATE_THRESHOLD
 
 def normalize(
     value
@@ -151,7 +151,7 @@ def exact_identity_match(
 
 def detect_duplicates(
     candidates: List[Dict],
-    threshold: float = 0.75
+    DUPLICATE_THRESHOLD: float = 0.75
 ):
 
     duplicates = []
@@ -216,7 +216,7 @@ def detect_duplicates(
                 similarity[i][j]
             )
 
-            if score >= threshold:
+            if score >= DUPLICATE_THRESHOLD:
 
                 duplicates.append(
                     {

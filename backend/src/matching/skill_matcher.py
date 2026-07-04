@@ -1,12 +1,26 @@
+from __future__ import annotations
+
 from .models import MatchResult
-from src.repositories.taxonomy_repository import TaxonomyRepository
+
+from src.knowledge_graph.services.taxonomy_service import (
+    TaxonomyService,
+)
 
 
 class SkillMatcher:
 
     def __init__(self):
 
-        self.taxonomy = TaxonomyRepository()
+        self.taxonomy = TaxonomyService()
+
+    @staticmethod
+    def _normalize(skill: str) -> str:
+
+        return (
+            skill.strip()
+            .lower()
+            .replace("-", " ")
+        )
 
     def match(
         self,
@@ -16,50 +30,79 @@ class SkillMatcher:
 
         result = MatchResult()
 
-        candidate_normalized = {
-            self.taxonomy.normalize(skill)
-            for skill in candidate_skills
-            if skill
-        }
+        if not required_skills:
+            result.score = 100.0
+            result.evidence.append(
+                "Job does not specify required skills."
+            )
+            return result
 
-        required_normalized = {
-            self.taxonomy.normalize(skill)
-            for skill in required_skills
-            if skill
-        }
+        candidate_map = {}
 
-        matched = (
-            candidate_normalized
-            &
-            required_normalized
-        )
+        for skill in candidate_skills:
 
-        missing = (
-            required_normalized
-            -
-            matched
-        )
+            normalized = self._normalize(skill)
 
-        result.matched = sorted(matched)
+            candidate_map[normalized] = skill
 
-        result.missing = sorted(missing)
+        matched = []
+        missing = []
+        evidence = []
 
-        if required_normalized:
+        for required in required_skills:
 
-            result.score = round(
-                len(matched)
-                /
-                len(required_normalized)
-                * 100,
-                2,
+            normalized_required = self._normalize(
+                required
             )
 
-        result.evidence.append(
+            if normalized_required in candidate_map:
 
-            f"{len(matched)} of "
-            f"{len(required_normalized)} "
-            f"required skills matched."
+                matched.append(required)
 
+                category = (
+                    self.taxonomy.get_skill_category(
+                        normalized_required
+                    )
+                )
+
+                if category:
+
+                    evidence.append(
+                        f"Matched '{required}' ({category})"
+                    )
+
+                else:
+
+                    evidence.append(
+                        f"Matched '{required}'"
+                    )
+
+            else:
+
+                missing.append(required)
+
+                evidence.append(
+                    f"Missing '{required}'"
+                )
+
+        result.matched = sorted(
+            list(set(matched))
+        )
+
+        result.missing = sorted(
+            list(set(missing))
+        )
+
+        result.evidence = evidence
+
+        result.score = round(
+            (
+                len(result.matched)
+                /
+                len(required_skills)
+            )
+            * 100,
+            2,
         )
 
         return result

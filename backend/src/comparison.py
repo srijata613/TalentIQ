@@ -1,120 +1,181 @@
-from .evaluator import evaluate_candidate
+from __future__ import annotations
+
+from copy import deepcopy
+from typing import Dict, List
+
+from src.candidate_pipeline import (
+    CandidatePipeline,
+)
 
 
-def shortlist_candidates(
-    ranking_results,
-    threshold=0.70
-):
-    return [
-        candidate
-        for candidate in ranking_results
-        if candidate["final_score"] >= threshold
-    ]
+class ComparisonEngine:
 
+    def __init__(self):
 
-def candidate_risk_score(
-    candidate_result
-):
-    risk = 0
+        self.pipeline = CandidatePipeline()
 
-    if len(
-        candidate_result.get(
-            "missing_skills",
-            []
+    def compare(
+        self,
+        candidates: List[Dict],
+        jd_text: str = "",
+    ) -> Dict:
+
+        processed = []
+
+        for candidate in candidates:
+
+            processed.append(
+
+                self.pipeline.process(
+                    deepcopy(candidate),
+                    jd_text,
+                )
+
+            )
+
+        processed.sort(
+
+            key=lambda c:
+            c["candidate_match"].overall_score,
+
+            reverse=True,
+
         )
-    ) >= 5:
-        risk += 40
 
-    if (
-        candidate_result.get(
-            "experience_score",
-            0
-        ) < 0.40
+        return {
+
+            "ranking":
+                processed,
+
+            "strength_comparison":
+                self._strengths(
+                    processed
+                ),
+
+            "weakness_comparison":
+                self._weaknesses(
+                    processed
+                ),
+
+            "risk_comparison":
+                self._risk(
+                    processed
+                ),
+
+            "recommendation_comparison":
+                self._recommendations(
+                    processed
+                ),
+
+            "winner":
+                processed[0]
+                if processed
+                else None,
+        }
+
+    def _strengths(
+        self,
+        candidates,
     ):
-        risk += 30
 
-    if (
-        candidate_result.get(
-            "education_score",
-            0
-        ) == 0
+        return {
+
+            candidate.get(
+                "parsed_name",
+                "Unknown",
+            ):
+
+            candidate.get(
+                "ai_profile",
+                {},
+            ).get(
+                "strengths",
+                [],
+            )
+
+            for candidate in candidates
+
+        }
+
+    def _weaknesses(
+        self,
+        candidates,
     ):
-        risk += 15
 
-    if (
-        candidate_result.get(
-            "communication_score",
-            0
-        ) < 0.30
+        return {
+
+            candidate.get(
+                "parsed_name",
+                "Unknown",
+            ):
+
+            candidate.get(
+                "ai_profile",
+                {},
+            ).get(
+                "concerns",
+                [],
+            )
+
+            for candidate in candidates
+
+        }
+
+    def _risk(
+        self,
+        candidates,
     ):
-        risk += 15
 
-    return min(risk, 100)
+        return {
+
+            candidate.get(
+                "parsed_name",
+                "Unknown",
+            ):
+
+            candidate.get(
+                "risk_assessment",
+                {},
+            )
+
+            for candidate in candidates
+
+        }
+
+    def _recommendations(
+        self,
+        candidates,
+    ):
+
+        return {
+
+            candidate.get(
+                "parsed_name",
+                "Unknown",
+            ):
+
+            candidate.get(
+                "ai_profile",
+                {},
+            ).get(
+                "recommendation",
+                "",
+            )
+
+            for candidate in candidates
+
+        }
+
+
+engine = ComparisonEngine()
 
 
 def compare_candidates(
-    jd_text,
-    resumes
+    candidates,
+    jd_text="",
 ):
-    results = []
 
-    for idx, resume in enumerate(
-        resumes
-    ):
-        candidate = (
-            evaluate_candidate(
-                jd_text,
-                resume
-            )
-        )
-
-        candidate["candidate_id"] = (
-            f"candidate_{idx+1}"
-        )
-
-        candidate["risk_score"] = (
-            candidate_risk_score(
-                candidate
-            )
-        )
-
-        results.append(candidate)
-
-    results.sort(
-        key=lambda x:
-        x["final_score"],
-        reverse=True
+    return engine.compare(
+        candidates,
+        jd_text,
     )
-
-    return results
-
-
-def generate_hiring_recommendation(
-    candidate
-):
-    score = candidate[
-        "final_score"
-    ]
-
-    risk = candidate[
-        "risk_score"
-    ]
-
-    if (
-        score >= 0.85
-        and risk <= 30
-    ):
-        return "Strong Hire"
-
-    if (
-        score >= 0.70
-        and risk <= 50
-    ):
-        return "Hire"
-
-    if (
-        score >= 0.50
-    ):
-        return "Consider"
-
-    return "Reject"

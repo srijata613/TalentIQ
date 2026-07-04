@@ -1,16 +1,14 @@
 from __future__ import annotations
 
+from re import match
 from typing import Dict, List
 
-CONFIDENCE_WEIGHTS = {
-    "skills": 20,
-    "experience": 20,
-    "projects": 15,
-    "certifications": 10,
-    "resume_quality": 15,
-    "risk": 10,
-    "knowledge_graph": 10,
-}
+from src.config import (
+    STRONG_HIRE_THRESHOLD,
+    HIRE_THRESHOLD,
+    BORDERLINE_THRESHOLD,
+    CONFIDENCE_WEIGHTS,
+)
 
 class CandidateProfileGenerator:
     def generate(
@@ -51,10 +49,7 @@ class CandidateProfileGenerator:
                 self._interview_strategy(candidate),
             
             "next_actions":
-                self._next_actions(candidate),
-            
-            "career_fit":
-                self._career_fit(candidate)
+                self._next_actions(candidate)
         }
 
     def _summary(
@@ -101,32 +96,24 @@ class CandidateProfileGenerator:
         candidate: Dict,
     ) -> str:
 
-        risk = (
-            candidate
-            .get(
-                "risk_assessment",
-                {},
-            )
-            .get(
-                "risk_score",
-                100,
-            )
+        match = candidate.get(
+            "candidate_match"
         )
-
-        leadership = candidate.get(
-            "leadership_experience",
-            0,
-        )
-
-        if risk < 20 and leadership >= 0.3:
+        
+        if match is None:
+            return "Unknown"
+        
+        score = match.overall_score
+        
+        if score >= STRONG_HIRE_THRESHOLD:
             return "Strong Hire"
-
-        if risk < 40:
+        
+        if score >= HIRE_THRESHOLD:
             return "Hire"
-
-        if risk < 60:
+        
+        if score >= BORDERLINE_THRESHOLD:
             return "Borderline"
-
+        
         return "Do Not Proceed"
 
     def _strengths(
@@ -135,51 +122,66 @@ class CandidateProfileGenerator:
     ) -> List[str]:
 
         strengths = []
-
-        if candidate.get(
-            "parsed_skills"
-        ):
-            strengths.append(
-                "Strong Technical Stack"
-            )
+        
+        match = candidate.get(
+            "candidate_match"
+        )
 
         if (
-            candidate.get(
-                "leadership_experience",
-                0,
-            )
-            >= 0.3
+
+            match
+            and
+            match.skill_match.score >= 80
         ):
+
             strengths.append(
-                "Leadership Indicators"
+                "Excellent Skill Alignment"
             )
 
-        if (
-            candidate.get(
-                "risk_assessment",
-                {},
-            ).get(
-                "risk_level"
-            )
-            == "Low"
-        ):
-            strengths.append(
-                "Low Hiring Risk"
-            )
+            if candidate.get(
+                "parsed_skills"
+            ):
+                strengths.append(
+                    "Strong Technical Stack"
+                )
 
-        if (
-            candidate.get(
-                "resume_quality",
-                {},
-            ).get(
-                "quality_score",
-                0,
-            )
-            > 70
-        ):
-            strengths.append(
-                "Well Structured Resume"
-            )
+            if (
+                candidate.get(
+                    "leadership_experience",
+                    0,
+                )
+                >= 0.3
+            ):
+                strengths.append(
+                    "Leadership Indicators"
+                )
+
+            if (
+                candidate.get(
+                    "risk_assessment",
+                    {},
+                ).get(
+                    "risk_level"
+                )
+                == "Low"
+            ):
+                strengths.append(
+                    "Low Hiring Risk"
+                )
+
+            if (
+                candidate.get(
+                    "resume_quality",
+                    {},
+                ).get(
+                    "quality_score",
+                    0,
+                )
+                > 70
+            ):
+                strengths.append(
+                    "Well Structured Resume"
+                )
 
         return strengths
 
@@ -190,21 +192,19 @@ class CandidateProfileGenerator:
 
         concerns = []
 
-        missing = (
-            candidate
-            .get(
-                "recommendations",
-                {},
-            )
-            .get(
-                "skill_gap_summary",
-                {},
-            )
-            .get(
-                "missing_skills",
-                [],
-            )
+        match = candidate.get(
+            "candidate_match"
         )
+        
+        missing = []
+        
+        if match:
+            
+            missing = (
+                match
+                .skill_match
+                .missing
+            )
 
         if missing:
 
@@ -238,21 +238,19 @@ class CandidateProfileGenerator:
 
         focus = []
 
-        missing = (
-            candidate
-            .get(
-                "recommendations",
-                {}
-            )
-            .get(
-                "skill_gap_summary",
-                {}
-            )
-            .get(
-                "missing_skills",
-                []
-            )
+        match = candidate.get(
+            "candidate_match"
         )
+        
+        missing = []
+        
+        if match:
+            
+            missing = (
+                match
+                .skill_match
+                .missing
+            )
 
         focus.extend(
             missing[:5]
@@ -293,15 +291,22 @@ class CandidateProfileGenerator:
         candidate: Dict,
     ) -> int:
 
+        match = candidate.get(
+            "candidate_match"
+        )
+
+        if not match:
+            return 0
+
         quality = (
             candidate
             .get(
                 "resume_quality",
-                {}
+                {},
             )
             .get(
                 "quality_score",
-                0,
+                70,
             )
         )
 
@@ -309,20 +314,23 @@ class CandidateProfileGenerator:
             candidate
             .get(
                 "risk_assessment",
-                {}
+                {},
             )
             .get(
                 "risk_score",
-                100,
+                0,
             )
         )
 
         confidence = (
-            quality * 0.6
-            + (100 - risk) * 0.4
+            match.overall_score * 0.60
+            + quality * 0.20
+            + (100 - risk) * 0.20
         )
 
-        return round(confidence)
+        return round(
+            min(confidence, 100)
+        )
     
     def _evidence(
         self,

@@ -7,18 +7,22 @@ import os
 import tempfile
 import requests
 
+import numpy as np
+from dataclasses import is_dataclass
+
+
+from src.llm.parser import (
+    parse_resume_with_llm,
+)
 from src.pdf_extractor import extract_pdf_text
 
 from src.ranker import rank_candidates
 
 from app.routes.jobs import router as jobs_router
 
-from pydantic import BaseModel
 from src.resume_parser import parse_resume
 from src.comparison import (
     compare_candidates,
-    shortlist_candidates,
-    generate_hiring_recommendation,
 )
 
 from app.routes.matching import (
@@ -47,7 +51,7 @@ from app.routes import (
     duplicate_resolution
 )
 
-from app.routes import copilot
+##from app.routes import copilot
 
 app = FastAPI(
     title="AI Resume Ranking Engine",
@@ -105,7 +109,7 @@ app.include_router(
     duplicate_resolution.router
 )
 
-app.include_router(copilot.router)
+##app.include_router(copilot.router)
 
 class RankingRequest(BaseModel):
     job_description: str
@@ -126,6 +130,24 @@ class ComparisonRequest(
 ):
     job_description: str
     resumes: List[str]
+    
+def find_numpy(obj, path="root"):
+
+        if isinstance(obj, np.generic):
+            print(f"NUMPY FOUND -> {path}: {type(obj)} = {obj}")
+            return
+
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                find_numpy(v, f"{path}.{k}")
+
+        elif isinstance(obj, list):
+            for i, v in enumerate(obj):
+                find_numpy(v, f"{path}[{i}]")
+
+        elif is_dataclass(obj):
+            for k, v in vars(obj).items():
+                find_numpy(v, f"{path}.{k}")
 
 @app.post("/rank", response_model=RankingResponse)
 def rank(request: RankingRequest):
@@ -137,10 +159,18 @@ def rank(request: RankingRequest):
 
     start = time.time()
 
+    parsed_candidates = [
+        parse_resume(resume)
+        
+        for resume in request.resumes
+    ]
+    
     results = rank_candidates(
+        parsed_candidates,
         request.job_description,
-        request.resumes
     )
+    
+    find_numpy(results)
 
     latency = time.time() - start
 
@@ -154,31 +184,20 @@ def compare(
     request: ComparisonRequest
 ):
 
-    results = compare_candidates(
-        request.job_description,
-        request.resumes
+    parsed_candidates = [
+        parse_resume(resume)
+        for resume in request.resumes
+    ]
+    
+    for c in parsed_candidates:
+        print(c["parsed_name"], c["parsed_experience_years"])
+    
+    comparison_results = compare_candidates(
+        parsed_candidates,
+        request.job_description
     )
 
-    shortlisted = (
-        shortlist_candidates(
-            results
-        )
-    )
-
-    for candidate in results:
-
-        candidate[
-            "hiring_recommendation"
-        ] = (
-            generate_hiring_recommendation(
-                candidate
-            )
-        )
-
-    return {
-        "ranking": results,
-        "shortlisted": shortlisted,
-    }
+    return comparison_results
 
 @app.get("/health")
 def health():
@@ -196,6 +215,13 @@ def parse_resume_endpoint(
     )
 
     return result
+
+@app.post("/llm-test")
+def llm_test(request: ResumeParseRequest):
+
+    return parse_resume_with_llm(
+        request.resume_text
+    )
 
 @app.post("/parse-resume-url")
 def parse_resume_url(request: ResumeUrlRequest):

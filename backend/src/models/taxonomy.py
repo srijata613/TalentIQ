@@ -6,23 +6,6 @@ from typing import Any
 
 @dataclass(slots=True)
 class TaxonomyEntity:
-    """
-    Canonical taxonomy entity used across the AI Recruitment Platform.
-
-    This model represents a normalized taxonomy record retrieved
-    from the repository layer.
-
-    Examples:
-        - Skill
-        - Technology
-        - Company
-        - University
-        - Certification
-        - Domain
-        - Industry
-        - Job Role
-    """
-
     id: str | None = None
 
     canonical_name: str = ""

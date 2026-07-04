@@ -1,7 +1,9 @@
 from sentence_transformers import SentenceTransformer
 
+from .config import MODEL_NAME
+
 model = SentenceTransformer(
-    "BAAI/bge-large-en-v1.5"
+    MODEL_NAME
 )
 
 

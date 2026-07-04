@@ -54,13 +54,14 @@ def compute_experience_alignment(jd_text, resume_text):
     weighted_sum = sum(score * weight for score, weight in zip(best_scores, weights))
     total_weight = sum(weights)
 
-    experience_score = (
+    experience_score = float(
         weighted_sum / total_weight
-        if total_weight > 0
-        else 0.0
-    )
+        if total_weight > 0 else 0.0)
 
-    return experience_score, best_scores
+    return (
+        float(experience_score),
+        [float(x) for x in best_scores]
+    )
 
 
 # normalization

@@ -1,6 +1,11 @@
 from typing import Dict, List
 import re
 
+from src.config import (
+    LOW_RISK_THRESHOLD,
+    MEDIUM_RISK_THRESHOLD,
+)
+
 
 def detect_skill_inflation(
     skills: List[str],
@@ -181,10 +186,10 @@ def get_risk_level(
     score: float
 ) -> str:
 
-    if score < 30:
+    if score < LOW_RISK_THRESHOLD:
         return "Low"
 
-    if score < 60:
+    if score < MEDIUM_RISK_THRESHOLD:
         return "Medium"
 
     return "High"
@@ -291,6 +296,3 @@ def calculate_risk_score(
     "ai_generated_resume_risk":
         ai_risk
     }
-
-def risk_level(score):
-    return get_risk_level(score)

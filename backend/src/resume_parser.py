@@ -1,16 +1,12 @@
 import re
-
+import os
 from .parsing import (
     extract_skills_dictionary,
     ALL_SKILLS,
 )
 
-from .intelligence import (
-    detect_behavioral_signals,
-    detect_implicit_skills,
-    estimate_adaptability,
-    estimate_growth_potential,
-    build_candidate_graph,
+from src.llm.parser import (
+    parse_resume_with_llm,
 )
 
 EMAIL_REGEX = (
@@ -156,6 +152,8 @@ OPEN_SOURCE_KEYWORDS = [
     "pull request",
 ]
 
+USE_LLM = os.getenv("USE_LLM", "false").lower() == "true"
+
 def extract_projects(lines):
 
     projects = []
@@ -226,7 +224,7 @@ def extract_experience_years(text):
     )
 
     if not matches:
-        return None
+        return 0
 
     return max(
         int(year)
@@ -359,7 +357,33 @@ def extract_open_source(lines):
 
     return list(set(results))
 
-def parse_resume(text: str):
+USE_LLM = False
+
+def parse_resume(
+    text: str,
+    use_llm: bool = USE_LLM,
+    ):
+    
+    
+    if use_llm:
+        try:
+            candidate = parse_resume_with_llm(
+                text
+            )
+        
+            if candidate.get(
+                "parsed_name"
+            ):
+                return candidate
+        
+            print(
+                "LLM failed to extract name, falling back to regex-based parsing."
+            )
+        
+        except Exception as e:
+            print(
+                f"LLM parsing failed: {e}"
+            )
 
     text_lower = text.lower()
 
@@ -437,31 +461,6 @@ def parse_resume(text: str):
         text,
         ALL_SKILLS
     )
-    
-    behavioral_signals = (
-        detect_behavioral_signals(
-            text
-        )
-    )
-    
-    inferred_skills = (
-        detect_implicit_skills(
-            skills
-        )
-    )
-    
-    adaptability_score = (
-        estimate_adaptability(
-            text
-        )
-    )
-    
-    growth_score = (
-        estimate_growth_potential(
-            text
-        )
-    )
-
     # Education
 
     degrees = []
@@ -517,99 +516,90 @@ def parse_resume(text: str):
     
     open_source = extract_open_source(lines)
     
-    candidate_graph = (
-        build_candidate_graph(
-            {
-                "skills": skills,
-                "projects": projects,
-                "certifications": certifications,
-                "companies": companies,
-            }
-        )
-    )
-    
 
     return {
 
-        "identity": {
-            "name": name,
+        "parsed_name": name,
 
-            "email":
-                email_match.group(0)
-                if email_match
-                else None,
+        "parsed_email":
+            email_match.group(0)
+            if email_match
+            else None,
 
-            "phone":
-                phone_match.group(0)
-                if phone_match
-                else None,
+        "parsed_phone":
+            phone_match.group(0)
+            if phone_match
+            else None,
 
-            "linkedin":
-                linkedin_match.group(0)
-                if linkedin_match
-                else None,
+        "parsed_linkedin":
+            linkedin_match.group(0)
+            if linkedin_match
+            else None,
 
-            "github":
-                github_match.group(0)
-                if github_match
-                else None,
+        "parsed_github":
+            github_match.group(0)
+            if github_match
+            else None,
 
-            "portfolio":
-                portfolio_match.group(0)
-                if portfolio_match
-                else None,
-        },
+        "parsed_portfolio":
+            portfolio_match.group(0)
+            if portfolio_match
+            else None,
 
-        "education": {
-            "degrees":
-                degrees,
+        "parsed_skills":
+            skills,
 
-            "graduation_years":
-                graduation_years,
-        },
+        "parsed_degrees":
+            degrees,
 
-        "experience": {
-            "designations":
-                designations,
-        },
+        "parsed_graduation_years":
+            graduation_years,
 
-        "skills": skills,
-        
-        "projects": projects,
+        "parsed_designations":
+            designations,
 
-        "certifications": certifications,
-        
-        "achievements": achievements,
-        
-        "summary": summary,
-        
-        "experience_years": experience_years,
-        
-        "location": location,
-        
-        "universities": universities,
-        
-        "cgpa": cgpa,
-        
-        "companies": companies,
-        
-        "leadership_signals": leadership_signals,
-        
-        "project_technologies": project_technologies,
-        
-        "project_impacts": project_impacts,
-        
-        "publications": publications,
-        
-        "open_source": open_source,
-        
-        "behavioral_signals": behavioral_signals,
-        
-        "inferred_skills": inferred_skills,
-        
-        "adaptability_score": adaptability_score,
-        
-        "growth_score": growth_score,
-        
-        "candidate_graph": candidate_graph,
+        "parsed_projects":
+            projects,
+
+        "parsed_certifications":
+            certifications,
+
+        "parsed_achievements":
+            achievements,
+
+        "parsed_summary":
+            summary,
+
+        "parsed_experience_years":
+            experience_years,
+
+        "parsed_location":
+            location,
+
+        "parsed_universities":
+            universities,
+
+        "parsed_cgpa":
+            cgpa,
+
+        "parsed_companies":
+            companies,
+
+        "parsed_leadership_signals":
+            leadership_signals,
+
+        "parsed_project_technologies":
+            project_technologies,
+
+        "parsed_project_impacts":
+            project_impacts,
+
+        "parsed_publications":
+            publications,
+
+        "parsed_open_source":
+            open_source,
+
+        "resume_text":
+            text,
     }

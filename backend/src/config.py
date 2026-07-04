@@ -1,3 +1,8 @@
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 #model name
 MODEL_NAME = "BAAI/bge-m3"
 
@@ -24,6 +29,78 @@ CERTIFICATION_WEIGHT = 0.05
 
 INDUSTRY_WEIGHT = 0.05
 
+# Matching Engine Weights
+MATCHING_WEIGHTS = {
+    "skill": 0.35,
+    "experience": 0.25,
+    "education": 0.10,
+    "certification": 0.10,
+    "project": 0.10,
+    "context": 0.10,
+}
+
+# Recruiter Recommendation Thresholds
+STRONG_HIRE_THRESHOLD = 85
+HIRE_THRESHOLD = 70
+BORDERLINE_THRESHOLD = 50
+
+# AI Profile Confidence Weights
+CONFIDENCE_WEIGHTS = {
+    "resume_quality": 0.30,
+    "risk": 0.20,
+    "matching": 0.50,
+}
+
+# Risk Levels
+LOW_RISK_THRESHOLD = 20
+MEDIUM_RISK_THRESHOLD = 40
+HIGH_RISK_THRESHOLD = 60
+
+RISK_WEIGHTS = {
+    "skill": 0.25,
+    "keyword": 0.15,
+    "gap": 0.20,
+    "hopping": 0.15,
+    "inconsistency": 0.10,
+    "ai": 0.15
+}
+
+DUPLICATE_THRESHOLD = 0.75
+MAX_KEYWORD_REPEAT = 20
+
+# Explainable AI Configuration
+EXCELLENT_MATCH_THRESHOLD = 0.80
+STRONG_MATCH_THRESHOLD = 0.70
+
+HIGH_RISK_THRESHOLD = 40
+MEDIUM_RISK_THRESHOLD = 20
+
+VERY_HIGH_CONFIDENCE = 85
+HIGH_CONFIDENCE = 70
+MEDIUM_CONFIDENCE = 55
+
+# Feature Attribution (%)
+FEATURE_ATTRIBUTION = {
+
+    "skills": 35,
+
+    "experience": 20,
+
+    "education": 5,
+
+    "certifications": 10,
+
+    "projects": 15,
+
+    "context": 15,
+}
+
+EXPLAINER_THRESHOLDS = {
+    "strong": 85,
+    "matched": 70,
+    "weak": 50,
+}
+
 PRIORITY_TERMS = [
     "required",
     "must",
@@ -31,6 +108,20 @@ PRIORITY_TERMS = [
     "essential",
     "minimum requirement"
 ]
+
+LLM_PROVIDER = os.getenv(
+    "LLM_PROVIDER",
+    "gemini"
+)
+
+GEMINI_API_KEY = os.getenv(
+    "GEMINI_API_KEY"
+)
+
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-2.5-flash"
+)
 
 # keywords
 DEGREE_KEYWORDS = [

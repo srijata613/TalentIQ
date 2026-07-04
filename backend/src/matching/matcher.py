@@ -26,6 +26,10 @@ from .context_matcher import (
     ContextMatcher,
 )
 
+from src.config import (
+    MATCHING_WEIGHTS,
+)
+
 
 class Matcher:
 
@@ -76,15 +80,24 @@ class Matcher:
 
         result.experience_match = (
             self.experience_matcher.match(
-                candidate,
-                job,
+                candidate.get(
+                    "resume_text",
+                    "",
+                ),
+                job.get(
+                    "content",
+                    "",
+                ),
             )
         )
 
         result.education_match = (
             self.education_matcher.match(
                 candidate,
-                job,
+                job.get(
+                    "content",
+                    "",
+                ),
             )
         )
 
@@ -109,48 +122,77 @@ class Matcher:
             )
         )
 
-        scores = [
-
-            result.skill_match.score,
-
-            result.experience_match.score,
-
-            result.education_match.score,
-
-            result.certification_match.score,
-
-            result.project_match.score,
-
-            result.context_match.score,
-        ]
+        weights = MATCHING_WEIGHTS
 
         result.overall_score = round(
-            sum(scores) / len(scores),
+            result.skill_match.score
+            * weights["skill"]
+            +
+            result.experience_match.score
+            * weights["experience"]
+            +
+            result.education_match.score
+            * weights["education"]
+            +
+            result.certification_match.score
+            * weights["certification"]
+            +
+            result.project_match.score
+            * weights["project"]
+            +
+            result.context_match.score
+            * weights["context"],
             2,
         )
 
-        result.evidence.extend(
-            result.skill_match.evidence
+        for match in [
+            result.skill_match,
+            result.experience_match,
+            result.education_match,
+            result.certification_match,
+            result.project_match,
+            result.context_match,
+        ]:
+            result.evidence.extend(match.evidence)
+
+        matches = [
+            result.skill_match,
+            result.experience_match,
+            result.education_match,
+            result.certification_match,
+            result.project_match,
+            result.context_match,
+        ]
+
+        result.metadata.total_evidence = len(result.evidence)
+
+        result.metadata.matched_categories = sum(
+            1 for m in matches
+            if m.score >= 70
         )
 
-        result.evidence.extend(
-            result.experience_match.evidence
+        result.metadata.strong_categories = sum(
+            1 for m in matches
+            if m.score >= 85
         )
 
-        result.evidence.extend(
-            result.education_match.evidence
+        result.metadata.weak_categories = sum(
+            1 for m in matches
+            if m.score < 50
         )
 
-        result.evidence.extend(
-            result.certification_match.evidence
+        confidence = (
+            result.overall_score * 0.7
+            +
+            min(
+                result.metadata.total_evidence,
+                20,
+            ) * 1.5
         )
 
-        result.evidence.extend(
-            result.project_match.evidence
-        )
-
-        result.evidence.extend(
-            result.context_match.evidence
+        result.metadata.overall_confidence = round(
+            min(confidence, 100.0),
+            2,
         )
 
         return result
