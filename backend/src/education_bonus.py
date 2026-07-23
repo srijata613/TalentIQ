@@ -1,17 +1,55 @@
-from .config import DEGREE_KEYWORDS, FIELD_KEYWORDS
+import re
+
+from .config import (
+    DEGREE_KEYWORDS,
+    FIELD_KEYWORDS,
+)
 
 
-# education scoring
-def compute_education_score(jd_text, resume_text):
+def _contains_keyword(
+    text: str,
+    keywords: list[str],
+) -> bool:
 
-    jd_lower = jd_text.lower()
-    resume_lower = resume_text.lower()
+    text = text.lower()
 
-    degree_required = any(k in jd_lower for k in DEGREE_KEYWORDS)
-    degree_present = any(k in resume_lower for k in DEGREE_KEYWORDS)
+    return any(
+        re.search(
+            rf"\b{re.escape(keyword.lower())}\b",
+            text,
+        )
+        for keyword in keywords
+    )
 
-    field_required = any(f in jd_lower for f in FIELD_KEYWORDS)
-    field_present = any(f in resume_lower for f in FIELD_KEYWORDS)
+
+# Education scoring
+def compute_education_score(
+    jd_text: str,
+    resume_text: str,
+) -> float:
+
+    if not jd_text or not resume_text:
+        return 0.0
+
+    degree_required = _contains_keyword(
+        jd_text,
+        DEGREE_KEYWORDS,
+    )
+
+    degree_present = _contains_keyword(
+        resume_text,
+        DEGREE_KEYWORDS,
+    )
+
+    field_required = _contains_keyword(
+        jd_text,
+        FIELD_KEYWORDS,
+    )
+
+    field_present = _contains_keyword(
+        resume_text,
+        FIELD_KEYWORDS,
+    )
 
     score = 0.0
 
@@ -21,20 +59,48 @@ def compute_education_score(jd_text, resume_text):
     if field_required and field_present:
         score += 0.5
 
-    return score
+    return min(score, 1.0)
 
 
-# bonus scoring
-def compute_bonus_score(jd_skills, resume_skills, matched_skills):
+# Bonus scoring
+def compute_bonus_score(
+    jd_skills: list[str],
+    resume_skills: list[str],
+    matched_skills: list[str],
+) -> float:
 
-    extra_skills = [
-        skill for skill in resume_skills
-        if skill not in jd_skills
-    ]
+    jd = {
+        skill.lower().strip()
+        for skill in jd_skills
+        if skill
+    }
 
-    if len(extra_skills) >= 2:
-        return 0.5
-    elif len(extra_skills) == 1:
+    resume = {
+        skill.lower().strip()
+        for skill in resume_skills
+        if skill
+    }
+
+    matched = {
+        skill.lower().strip()
+        for skill in matched_skills
+        if skill
+    }
+
+    extra_skills = resume - jd - matched
+
+    count = len(extra_skills)
+
+    if count >= 5:
+        return 1.0
+
+    if count >= 3:
+        return 0.75
+
+    if count >= 2:
+        return 0.50
+
+    if count == 1:
         return 0.25
-    else:
-        return 0.0
+
+    return 0.0

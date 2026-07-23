@@ -67,10 +67,7 @@ class Matcher:
 
         result.skill_match = (
             self.skill_matcher.match(
-                candidate.get(
-                    "parsed_skills",
-                    [],
-                ),
+                candidate,
                 job.get(
                     "required_skills",
                     [],
@@ -80,14 +77,8 @@ class Matcher:
 
         result.experience_match = (
             self.experience_matcher.match(
-                candidate.get(
-                    "resume_text",
-                    "",
-                ),
-                job.get(
-                    "content",
-                    "",
-                ),
+                candidate,
+                job,
             )
         )
 
@@ -126,34 +117,24 @@ class Matcher:
 
         result.overall_score = round(
             result.skill_match.score
-            * weights["skill"]
+            * weights.get("skill", 0)
             +
             result.experience_match.score
-            * weights["experience"]
+            * weights.get("experience", 0)
             +
             result.education_match.score
-            * weights["education"]
+            * weights.get("education", 0)
             +
             result.certification_match.score
-            * weights["certification"]
+            * weights.get("certification", 0)
             +
             result.project_match.score
-            * weights["project"]
+            * weights.get("project", 0)
             +
             result.context_match.score
-            * weights["context"],
+            * weights.get("context", 0),
             2,
         )
-
-        for match in [
-            result.skill_match,
-            result.experience_match,
-            result.education_match,
-            result.certification_match,
-            result.project_match,
-            result.context_match,
-        ]:
-            result.evidence.extend(match.evidence)
 
         matches = [
             result.skill_match,
@@ -163,6 +144,13 @@ class Matcher:
             result.project_match,
             result.context_match,
         ]
+
+        for match in matches:
+            result.evidence.extend(match.evidence)
+
+        result.evidence = list(
+            dict.fromkeys(result.evidence)
+        )
 
         result.metadata.total_evidence = len(result.evidence)
 

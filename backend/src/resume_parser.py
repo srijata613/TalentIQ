@@ -1,5 +1,6 @@
 import re
 import os
+from venv import logger
 from .parsing import (
     extract_skills_dictionary,
     ALL_SKILLS,
@@ -152,6 +153,24 @@ OPEN_SOURCE_KEYWORDS = [
     "pull request",
 ]
 
+IGNORE_HEADERS = {
+    "summary",
+    "professional summary",
+    "experience",
+    "education",
+    "skills",
+    "projects",
+    "project",
+    "certifications",
+    "certification",
+    "achievements",
+    "achievement",
+    "open source",
+    "publications",
+    "publication",
+    "github",
+}
+
 USE_LLM = os.getenv("USE_LLM", "false").lower() == "true"
 
 def extract_projects(lines):
@@ -160,15 +179,27 @@ def extract_projects(lines):
 
     for line in lines:
 
-        lower = line.lower()
+        lower = line.lower().strip()
+
+        if lower in IGNORE_HEADERS:
+            continue
 
         if any(
-            keyword in lower
+            re.search(
+                rf"\b{re.escape(keyword)}\b",
+                lower,
+            )
             for keyword in PROJECT_KEYWORDS
+        ):
+            continue
+        
+        if (
+            2 <= len(line.split()) <= 8
+            and line[0].isupper()
         ):
             projects.append(line)
 
-    return list(set(projects))
+    return list(dict.fromkeys(projects))
 
 
 def extract_certifications(lines):
@@ -177,15 +208,27 @@ def extract_certifications(lines):
 
     for line in lines:
 
-        lower = line.lower()
+        lower = line.lower().strip()
+
+        if lower in IGNORE_HEADERS:
+            continue
 
         if any(
-            keyword in lower
+            re.search(
+                rf"\b{re.escape(keyword)}\b",
+                lower,
+            )
             for keyword in CERTIFICATION_KEYWORDS
         ):
             certifications.append(line)
 
-    return list(set(certifications))
+        elif re.search(
+            rf"\b{re.escape('certified')}\b",
+            lower,
+        ):
+            certifications.append(line)
+
+    return list(dict.fromkeys(certifications))
 
 
 def extract_achievements(lines):
@@ -194,25 +237,50 @@ def extract_achievements(lines):
 
     for line in lines:
 
-        lower = line.lower()
+        lower = line.lower().strip()
+
+        if lower in IGNORE_HEADERS:
+            continue
 
         if any(
-            keyword in lower
+            re.search(
+                rf"\b{re.escape(keyword)}\b",
+                lower,
+            )
             for keyword in ACHIEVEMENT_KEYWORDS
         ):
             achievements.append(line)
 
-    return list(set(achievements))
+    return list(dict.fromkeys(achievements))
 
 
 def extract_summary(lines):
 
-    if len(lines) < 5:
-        return None
+    summary_started = False
+    summary = []
 
-    return " ".join(
-        lines[0:5]
-    )[:1000]
+    for line in lines:
+
+        lower = line.lower()
+
+        if re.search(rf"\b{re.escape('summary')}\b", lower):
+            summary_started = True
+            continue
+
+        if summary_started:
+
+            if re.fullmatch(
+                r"(professional\s+)?(experience|education|projects|skills|certifications):?",
+                lower.strip(),
+            ):
+                break
+
+            summary.append(line)
+
+    if summary:
+        return " ".join(summary)
+
+    return None
 
 
 def extract_experience_years(text):
@@ -253,12 +321,12 @@ def extract_universities(lines):
         lower = line.lower()
 
         if any(
-            keyword in lower
+            re.search(rf"\b{re.escape(keyword)}\b", lower)
             for keyword in UNIVERSITY_KEYWORDS
         ):
             universities.append(line)
 
-    return list(set(universities))
+    return list(dict.fromkeys(universities))
 
 def extract_cgpa(text):
 
@@ -273,34 +341,71 @@ def extract_cgpa(text):
 
     try:
         return float(match.group(1))
-    except:
+    except ValueError:
         return None
     
 def extract_companies(text):
 
     companies = []
 
-    lower = text.lower()
+    lines = text.splitlines()
+
+    company_suffixes = (
+        "pvt ltd",
+        "private limited",
+        "limited",
+        "ltd",
+        "inc",
+        "llc",
+        "technologies",
+        "solutions",
+        "systems",
+        "labs",
+    )
+
+    for line in lines:
+
+        stripped = line.strip()
+
+        lower = stripped.lower()
+
+        if any(
+            re.search(
+                rf"\b{re.escape(suffix)}\b",
+                lower,
+            )
+            for suffix in company_suffixes
+        ):
+            companies.append(stripped)
 
     for company in COMPANY_KEYWORDS:
 
-        if company in lower:
-            companies.append(company)
+        if re.search(
+            rf"\b{re.escape(company)}\b",
+            text.lower(),
+        ):
+            companies.append(company.title())
 
-    return list(set(companies))
+    return list(dict.fromkeys(companies))
 
 def extract_leadership_signals(text):
 
     signals = []
 
-    lower = text.lower()
+    for line in text.splitlines():
 
-    for keyword in LEADERSHIP_KEYWORDS:
+        lower = line.lower()
 
-        if keyword in lower:
-            signals.append(keyword)
+        if any(
+            re.search(
+                rf"\b{re.escape(keyword)}\b",
+                lower,
+            )
+            for keyword in LEADERSHIP_KEYWORDS
+        ):
+            signals.append(line.strip())
 
-    return list(set(signals))
+    return list(dict.fromkeys(signals))
 
 def extract_project_technologies(text):
 
@@ -317,13 +422,20 @@ def extract_project_impacts(lines):
 
         lower = line.lower()
 
-        if any(
-            keyword in lower
+        if (
+            "%" in lower
+            or any(
+                re.search(
+                    rf"\b{re.escape(keyword)}\b",
+                    lower,
+                )
             for keyword in IMPACT_KEYWORDS
+            if keyword != "%"
+            )
         ):
             impacts.append(line)
 
-    return list(set(impacts))
+    return list(dict.fromkeys(impacts))
 
 def extract_publications(lines):
 
@@ -334,12 +446,12 @@ def extract_publications(lines):
         lower = line.lower()
 
         if any(
-            keyword in lower
+            re.search(rf"\b{re.escape(keyword)}\b", lower)
             for keyword in PUBLICATION_KEYWORDS
         ):
             publications.append(line)
 
-    return list(set(publications))
+    return list(dict.fromkeys(publications))
 
 def extract_open_source(lines):
 
@@ -347,22 +459,23 @@ def extract_open_source(lines):
 
     for line in lines:
 
-        lower = line.lower()
+        lower = line.lower().strip()
+
+        if lower in IGNORE_HEADERS:
+            continue
 
         if any(
-            keyword in lower
+            re.search(rf"\b{re.escape(keyword)}\b", lower)
             for keyword in OPEN_SOURCE_KEYWORDS
         ):
             results.append(line)
 
-    return list(set(results))
-
-USE_LLM = False
+    return list(dict.fromkeys(results))
 
 def parse_resume(
     text: str,
     use_llm: bool = USE_LLM,
-    ):
+    ) -> dict:
     
     
     if use_llm:
@@ -376,12 +489,12 @@ def parse_resume(
             ):
                 return candidate
         
-            print(
+            logger.warning(
                 "LLM failed to extract name, falling back to regex-based parsing."
             )
         
         except Exception as e:
-            print(
+            logger.error(
                 f"LLM parsing failed: {e}"
             )
 
@@ -467,13 +580,16 @@ def parse_resume(
 
     for degree in DEGREE_PATTERNS:
 
-        if degree in text_lower:
+        if re.search(
+            rf"\b{re.escape(degree)}\b",
+            text_lower,
+        ):
             degrees.append(degree)
 
-    degrees = list(set(degrees))
+    degrees = list(dict.fromkeys(degrees))
 
     graduation_years = list(
-        set(
+        dict.fromkeys(
             re.findall(
                 YEAR_REGEX,
                 text
@@ -489,13 +605,14 @@ def parse_resume(
 
     for designation in DESIGNATIONS:
 
-        if designation in text_lower:
-            designations.append(
-                designation
-            )
+        if re.search(
+            rf"\b{re.escape(designation)}\b",
+            text_lower,
+        ):
+            designations.append(designation)
 
     designations = list(
-        set(designations)
+        dict.fromkeys(designations)
     )
     
     location = extract_location(lines)

@@ -19,16 +19,16 @@ class CertificationMatcher:
                 "parsed_certifications",
                 []
             )
-            if cert
+            if isinstance(cert, str) and cert.strip()
         }
 
         required_certs = {
             cert.strip().lower()
             for cert in job.get(
-                "required_certifications",
+                "certifications",
                 []
             )
-            if cert
+            if isinstance(cert, str) and cert.strip()
         }
 
         if not required_certs:

@@ -11,10 +11,19 @@ from .resume_quality import (
 )
 
 def estimate_skill_proficiency(
+    candidate,
     resume_text,
-    skills
+    skills,
 ):
     text_lower = resume_text.lower()
+
+    project_technologies = {
+        technology.lower()
+        for technology in candidate.get(
+            "parsed_project_technologies",
+            [],
+        )
+    }
 
     proficiency = {}
 
@@ -24,9 +33,12 @@ def estimate_skill_proficiency(
             skill.lower()
         )
 
+        if skill.lower() in project_technologies:
+            mentions += 2
+
         proficiency[skill] = min(
             round(mentions / 3, 2),
-            1.0
+            1.0,
         )
 
     return proficiency
@@ -34,73 +46,155 @@ def estimate_skill_proficiency(
 
 def estimate_skill_relevance(
     jd_skills,
-    resume_skills
+    resume_skills,
 ):
+
     if not jd_skills:
         return 0.0
 
+    jd = {
+        skill.lower()
+        for skill in jd_skills
+    }
+
+    resume = {
+        skill.lower()
+        for skill in resume_skills
+    }
+
     overlap = len(
-        set(
-            skill.lower()
-            for skill in jd_skills
-        ).intersection(
-            set(
-                skill.lower()
-                for skill in resume_skills
-            )
-        )
+        jd & resume
     )
 
-    return round(
-        overlap / len(jd_skills),
-        2
+    score = (
+        overlap /
+        max(len(jd), 1)
     )
+
+    return round(score, 2)
 
 
 def estimate_domain_experience(
-    jd_skills,
-    resume_skills
+    candidate,
 ):
-    return estimate_skill_relevance(
-        jd_skills,
-        resume_skills
-    )
+
+    domains = {
+
+        "backend": {
+            "fastapi",
+            "django",
+            "flask",
+            "spring",
+            "node",
+            "express",
+            "rest",
+            "microservices",
+        },
+
+        "ai_ml": {
+            "tensorflow",
+            "pytorch",
+            "scikit-learn",
+            "llm",
+            "langchain",
+            "transformers",
+        },
+
+        "cloud": {
+            "aws",
+            "azure",
+            "gcp",
+            "docker",
+            "kubernetes",
+        },
+
+        "frontend": {
+            "react",
+            "next.js",
+            "vue",
+            "angular",
+        },
+    }
+
+    skills = {
+        skill.lower()
+        for skill in candidate.get(
+            "parsed_skills",
+            [],
+        )
+    }
+
+    scores = {}
+
+    for domain, required in domains.items():
+
+        scores[domain] = round(
+            len(
+                skills & required
+            )
+            /
+            len(required),
+            2,
+        )
+
+    return scores
 
 
 def estimate_leadership_experience(
-    behavioral_signals
+    behavioral_signals,
+    candidate,
 ):
-    score = (
-        behavioral_signals.get(
-            "leadership",
-            0
+
+    score = behavioral_signals.get(
+        "leadership",
+        0,
+    )
+
+    score += len(
+        candidate.get(
+            "parsed_leadership_signals",
+            [],
         )
     )
 
     return min(
-        round(score / 3, 2),
-        1.0
+        round(score / 5, 2),
+        1.0,
     )
 
 
 def estimate_ownership_score(
-    behavioral_signals
+    behavioral_signals,
+    candidate,
 ):
-    score = (
-        behavioral_signals.get(
-            "ownership",
-            0
+
+    score = behavioral_signals.get(
+        "ownership",
+        0,
+    )
+
+    score += len(
+        candidate.get(
+            "parsed_leadership_signals",
+            [],
+        )
+    )
+
+    score += len(
+        candidate.get(
+            "parsed_open_source",
+            [],
         )
     )
 
     return min(
-        round(score / 3, 2),
-        1.0
+        round(score / 5, 2),
+        1.0,
     )
 
 
 def estimate_initiative_score(
-    behavioral_signals
+    behavioral_signals,
 ):
     score = (
         behavioral_signals.get(
@@ -168,7 +262,7 @@ def build_candidate_intelligence(
     
     coverage = (
         analyze_section_coverage(
-            resume_text
+            candidate
         )
     )
     
@@ -186,6 +280,7 @@ def build_candidate_intelligence(
     
     quality_score = (
         calculate_resume_quality_score(
+            candidate,
             completeness,
             stuffing
         )
@@ -204,6 +299,7 @@ def build_candidate_intelligence(
 
         "skill_proficiency":
             estimate_skill_proficiency(
+                candidate,
                 resume_text,
                 explicit_skills
             ),
@@ -216,18 +312,19 @@ def build_candidate_intelligence(
 
         "domain_experience":
             estimate_domain_experience(
-                jd_skills,
-                explicit_skills
+                candidate
             ),
 
         "leadership_experience":
             estimate_leadership_experience(
-                behavioral
+                behavioral,
+                candidate
             ),
 
         "ownership_score":
             estimate_ownership_score(
-                behavioral
+                behavioral,
+                candidate,
             ),
 
         "initiative_score":

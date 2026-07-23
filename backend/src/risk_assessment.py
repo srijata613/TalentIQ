@@ -1,11 +1,12 @@
+import datetime
 from typing import Dict, List
-import re
 
 from src.config import (
     LOW_RISK_THRESHOLD,
     MEDIUM_RISK_THRESHOLD,
 )
 
+from datetime import datetime
 
 def detect_skill_inflation(
     skills: List[str],
@@ -28,15 +29,24 @@ def detect_skill_inflation(
     }
 
     supported = len(
-        claimed.intersection(proven)
+        claimed & proven
     )
 
-    unsupported = len(claimed) - supported
-
-    return round(
-        (unsupported / max(len(claimed), 1)) * 100,
-        2
+    support_ratio = (
+        supported /
+        max(len(claimed), 1)
     )
+
+    if support_ratio >= 0.70:
+        return 0
+
+    if support_ratio >= 0.50:
+        return 20
+
+    if support_ratio >= 0.30:
+        return 45
+
+    return 70
 
 
 def detect_keyword_stuffing(
@@ -117,7 +127,7 @@ def detect_job_hopping_risk(
 
 def detect_resume_inconsistency(
     graduation_years,
-    experience_years
+    experience_years,
 ) -> float:
 
     if not graduation_years:
@@ -131,9 +141,20 @@ def detect_resume_inconsistency(
             if str(y).isdigit()
         )
 
+        current_year = datetime.now().year
+        
         estimated_max_experience = (
-            2026 - latest_grad_year
+            current_year - latest_grad_year
         )
+
+        if experience_years > 35:
+            return 100
+
+        if (
+            latest_grad_year >= 2024
+            and experience_years >= 8
+        ):
+            return 100
 
         if experience_years > (
             estimated_max_experience + 2
@@ -170,7 +191,16 @@ def detect_ai_generated_resume(
         "detail-oriented",
         "self-starter",
         "fast-paced environment",
-        "proven track record"
+        "proven track record",
+        "results oriented",
+        "excellent communication",
+        "strong analytical skills",
+        "works well under pressure",
+        "hardworking",
+        "go getter",
+        "problem solver",
+        "adaptable",
+        "innovative",
     ]
 
     matches = sum(
@@ -179,7 +209,7 @@ def detect_ai_generated_resume(
         if phrase in summary
     )
 
-    return min(matches * 10, 100)
+    return min(matches * 5, 40)
 
 
 def get_risk_level(
@@ -240,7 +270,7 @@ def calculate_risk_score(
             candidate.get(
                 "parsed_experience_years",
                 0
-            )
+            ),
         )
     )
 
@@ -252,12 +282,12 @@ def calculate_risk_score(
     )
 
     weights = {
-        "skill": 0.25,
-        "keyword": 0.15,
+        "skill": 0.30,
+        "keyword": 0.10,
         "gap": 0.20,
         "hopping": 0.15,
-        "inconsistency": 0.10,
-        "ai": 0.15
+        "inconsistency": 0.20,
+        "ai": 0.05
     }
 
     final_score = round(

@@ -2,30 +2,56 @@ from typing import List, Dict
 
 
 COURSE_MAP = {
+
     "python": [
         "Python for Everybody",
-        "Advanced Python Programming"
+        "Advanced Python Programming",
     ],
+
+    "fastapi": [
+        "FastAPI - The Complete Course",
+    ],
+
+    "docker": [
+        "Docker Mastery",
+    ],
+
+    "kubernetes": [
+        "Kubernetes for Developers",
+    ],
+
+    "aws": [
+        "AWS Cloud Practitioner",
+        "AWS Developer Associate",
+    ],
+
+    "postgresql": [
+        "PostgreSQL Bootcamp",
+    ],
+
+    "redis": [
+        "Redis Essentials",
+    ],
+
     "machine learning": [
         "Machine Learning Specialization",
-        "Hands-On Machine Learning"
     ],
+
     "deep learning": [
-        "Deep Learning Specialization"
+        "Deep Learning Specialization",
     ],
+
     "nlp": [
-        "Natural Language Processing Specialization"
+        "Natural Language Processing Specialization",
     ],
-    "cloud": [
-        "AWS Cloud Practitioner",
-        "Google Cloud Fundamentals"
+
+    "langchain": [
+        "LangChain for LLM Applications",
     ],
-    "docker": [
-        "Docker Mastery"
+
+    "rag": [
+        "Retrieval-Augmented Generation",
     ],
-    "kubernetes": [
-        "Kubernetes for Developers"
-    ]
 }
 
 
@@ -50,22 +76,40 @@ CERTIFICATION_MAP = {
 
 
 PROJECT_MAP = {
+
+    "fastapi": [
+        "Production FastAPI REST API",
+    ],
+
+    "docker": [
+        "Containerized Microservice Deployment",
+    ],
+
+    "aws": [
+        "Deploy FastAPI on AWS ECS",
+    ],
+
+    "redis": [
+        "Distributed Cache System",
+    ],
+
+    "postgresql": [
+        "Database Optimization Dashboard",
+    ],
+
     "machine learning": [
         "End-to-End ML Pipeline",
-        "Customer Churn Prediction"
+        "Customer Churn Prediction",
     ],
+
     "nlp": [
         "Resume Parser",
-        "Chatbot Assistant"
+        "LLM Chatbot",
     ],
+
     "computer vision": [
-        "Object Detection System",
-        "Medical Image Analyzer"
+        "YOLO Detection System",
     ],
-    "backend": [
-        "Microservice Architecture Project",
-        "API Gateway System"
-    ]
 }
 
 
@@ -82,7 +126,29 @@ CAREER_PATHS = {
     "cloud": [
         "Cloud Engineer",
         "DevOps Engineer"
-    ]
+    ],
+    "fastapi": [
+        "Backend Engineer",
+    ],
+    "aws": [
+        "Cloud Engineer",
+    ],
+
+    "docker": [
+        "Platform Engineer",
+    ],
+
+    "langchain": [
+        "LLM Engineer",
+    ],
+
+    "nlp": [
+        "AI Engineer",
+    ],
+
+    "computer vision": [
+        "Computer Vision Engineer",
+    ],
 }
 
 
@@ -94,7 +160,7 @@ def recommend_courses(missing_skills: List[str]) -> List[str]:
             COURSE_MAP.get(skill.lower(), [])
         )
 
-    return list(set(recommendations))
+    return sorted(set(recommendations))
 
 
 def recommend_certifications(
@@ -108,7 +174,7 @@ def recommend_certifications(
             CERTIFICATION_MAP.get(skill.lower(), [])
         )
 
-    return list(set(certs))
+    return sorted(set(certs))
 
 
 def recommend_projects(
@@ -122,7 +188,7 @@ def recommend_projects(
             PROJECT_MAP.get(skill.lower(), [])
         )
 
-    return list(set(projects))
+    return sorted(set(projects))
 
 
 def recommend_career_paths(
@@ -136,7 +202,7 @@ def recommend_career_paths(
             CAREER_PATHS.get(skill.lower(), [])
         )
 
-    return list(set(paths))
+    return sorted(set(paths))
 
 
 def generate_recommendations(
@@ -160,6 +226,56 @@ def generate_recommendations(
         candidate_skills
     )
 
+    if len(missing_skills) >= 8:
+
+        priority = "High"
+
+    elif len(missing_skills) >= 4:
+
+        priority = "Medium"
+
+    else:
+
+        priority = "Low"
+
+    roadmap = []
+
+    for skill in missing_skills[:5]:
+
+        roadmap.append(
+            f"Learn {skill.title()}"
+        )
+
+    if courses:
+
+        roadmap.append(
+            "Complete recommended courses"
+        )
+
+    if projects:
+
+        roadmap.append(
+            "Build recommended projects"
+        )
+
+    if certifications:
+
+        roadmap.append(
+            "Earn relevant certifications"
+        )
+
+    roadmap.append(
+        "Practice technical interview questions"
+    )
+
+    roadmap.append(
+        "Apply for progressively challenging roles"
+    )
+
+    roadmap = list(
+        dict.fromkeys(roadmap)
+    )
+
     return {
 
         "skill_gap_summary": {
@@ -172,23 +288,8 @@ def generate_recommendations(
 
         },
 
-        "priority": (
-
-            "High"
-
-            if len(missing_skills) >= 5
-
-            else
-
-            "Medium"
-
-            if len(missing_skills) >= 2
-
-            else
-
-            "Low"
-
-        ),
+        "priority":
+            priority,
 
         "courses":
             courses,
@@ -202,15 +303,6 @@ def generate_recommendations(
         "career_paths":
             career_paths,
 
-        "learning_roadmap": [
-
-            "Complete recommended courses",
-
-            "Build suggested projects",
-
-            "Earn relevant certifications",
-
-            "Apply for progressively challenging roles"
-
-        ]
+        "learning_roadmap":
+            roadmap,
     }

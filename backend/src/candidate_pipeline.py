@@ -47,7 +47,7 @@ class CandidatePipeline:
 
         self._calculate_risk(candidate)
         
-        self._match_candidate(
+        job = self._match_candidate(
             candidate,
             jd_text,
         )
@@ -58,7 +58,7 @@ class CandidatePipeline:
         
         self._candidate_intelligence(
             candidate,
-            jd_text,
+            job,
         )
                 
         self._generate_ai_profile(
@@ -91,10 +91,24 @@ class CandidatePipeline:
         candidate: Dict,
     ):
 
+        candidate_match = candidate.get(
+        "candidate_match"
+        )
+
+        if candidate_match is None:
+            missing_skills = []
+
+        else:
+            missing_skills = (
+                candidate_match
+                .skill_match
+                .missing
+            )
+
         candidate[
             "recommendations"
         ] = generate_recommendations(
-            missing_skills=[],
+            missing_skills=missing_skills,
             candidate_skills=candidate.get(
                 "parsed_skills",
                 [],
@@ -104,13 +118,13 @@ class CandidatePipeline:
     def _candidate_intelligence(
         self,
         candidate: Dict,
-        jd_text: str,
+        job: Dict,
     ):
 
         intelligence = (
             build_candidate_intelligence(
                 candidate,
-                []
+                job.get("required_skills", [])
             )
         )
 
@@ -122,10 +136,14 @@ class CandidatePipeline:
         self,
         candidate: Dict,
         jd_text: str,
-    ):
+    ) -> Dict:
 
         try:
             job = parse_job_with_llm(jd_text)
+            
+            print("=" * 80)
+            print(job)
+            print("=" * 80)
             
         except Exception:
             job = {
@@ -155,6 +173,8 @@ class CandidatePipeline:
             )
         )
         
+        return job
+    
     def _generate_ai_profile(
         self,
         candidate: Dict,

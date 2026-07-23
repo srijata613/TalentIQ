@@ -22,24 +22,54 @@ class EducationMatcher:
             "",
         )
 
+        if not resume_text.strip():
+
+            result.evidence.append(
+                "Resume text unavailable."
+            )
+
+            return result
+
+        if not jd_text.strip():
+
+            result.score = 100.0
+
+            result.evidence.append(
+                "Job description unavailable."
+            )
+
+            return result
+
         score = compute_education_score(
             jd_text,
             resume_text,
         )
 
         result.score = round(
-            score * 100,
+            max(
+                0.0,
+                min(score, 1.0),
+            )
+            * 100,
             2,
         )
 
-        degrees = candidate.get(
-            "parsed_degrees",
-            [],
+        degrees = list(
+            dict.fromkeys(
+                candidate.get(
+                    "parsed_degrees",
+                    [],
+                )
+            )
         )
 
-        universities = candidate.get(
-            "parsed_universities",
-            [],
+        universities = list(
+            dict.fromkeys(
+                candidate.get(
+                    "parsed_universities",
+                    [],
+                )
+            )
         )
 
         cgpa = candidate.get(
@@ -52,7 +82,9 @@ class EducationMatcher:
                 "Degree information detected."
             )
 
-            result.matched.extend(degrees)
+            result.matched.extend(
+                degrees
+            )
 
         else:
 

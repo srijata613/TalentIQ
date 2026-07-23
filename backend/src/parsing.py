@@ -172,18 +172,28 @@ def extract_experience_requirement(
     ]
 
     text_lower = text.lower()
+    matches = []
 
     for pattern in patterns:
 
-        match = re.search(
-            pattern,
-            text_lower
+        matches.extend(
+            re.findall(
+                pattern,
+                text_lower,
+            )
         )
 
-        if match:
-            return match.group(1)
+    if not matches:
+        return None
 
-    return None
+    best = max(
+        matches,
+        key=lambda x: int(
+            re.search(r"\d+", x).group()
+        )
+    )
+
+    return best
 
 
 # Education Extraction
@@ -297,7 +307,10 @@ def extract_soft_skills(text):
     return [
         skill
         for skill in SOFT_SKILLS
-        if skill in text_lower
+        if re.search(
+            rf"\b{re.escape(skill)}\b",
+            text_lower,
+        )
     ]
 
 
@@ -310,7 +323,10 @@ def extract_tools(text):
     return [
         tool
         for tool in TOOLS
-        if tool in text_lower
+        if re.search(
+            rf"\b{re.escape(tool)}\b",
+            text_lower,
+        )
     ]
 
 
@@ -416,10 +432,11 @@ def extract_industry(text):
 
     for industry in INDUSTRIES:
 
-        if industry in text_lower:
+        if re.search(
+            rf"\b{re.escape(industry)}\b",
+            text_lower,
+        ):
             return industry
-
-    return None
 
 
 # Domain
@@ -436,7 +453,10 @@ def extract_domain(text):
 
         for keyword in keywords:
 
-            if keyword in text_lower:
+            if re.search(
+                rf"\b{re.escape(keyword)}\b",
+                text_lower,
+            ):
                 score += 1
 
         scores[domain] = score
@@ -472,13 +492,17 @@ def extract_responsibilities(text):
 
         line = line.strip()
 
-        if (
-            line.startswith("-")
-            or line.startswith("•")
+        if re.match(
+            r"^(\-|\*|•|✓|\d+\.)",
+            line
         ):
             responsibilities.append(
-                line.lstrip("-• ").strip()
+                re.sub(
+                    r"^(\-|\*|•|✓|\d+\.)\s*",
+                    "",
+                    line,
             )
+        )
 
     return responsibilities
 
@@ -649,7 +673,10 @@ def detect_hidden_requirements(text):
     return [
         req
         for req in HIDDEN_REQUIREMENTS
-        if req in text_lower
+        if re.search(
+            rf"\b{re.escape(req)}\b",
+            text_lower,
+        )
     ]
 
 
@@ -675,12 +702,13 @@ def extract_semantic_requirements(text):
         lower = sentence.lower()
 
         if any(
-            pattern in lower
+            re.search(
+                rf"\b{re.escape(pattern)}\b",
+                lower,
+            )
             for pattern in patterns
         ):
-            semantic.append(
-                sentence.strip()
-            )
+            semantic.append(sentence.strip())
 
     return semantic[:10]
 
@@ -784,14 +812,14 @@ def extract_universities(text):
         lower = line.lower()
 
         if any(
-            keyword in lower
+            re.search(rf"\b{re.escape(keyword)}\b", lower)
             for keyword in UNIVERSITY_KEYWORDS
         ):
             results.append(
                 line.strip()
             )
 
-    return list(set(results))
+    return list(dict.fromkeys(results))
 
 
 def extract_cgpa(text):
@@ -829,14 +857,14 @@ def extract_companies(text):
         lower = line.lower()
 
         if any(
-            suffix in lower
+            re.search(rf"\b{re.escape(suffix)}\b", lower)
             for suffix in COMPANY_SUFFIXES
         ):
             companies.append(
                 line.strip()
             )
 
-    return list(set(companies))
+    return list(dict.fromkeys(companies))
 
 
 def extract_leadership_signals(text):
@@ -856,7 +884,7 @@ def extract_leadership_signals(text):
 
     for term in leadership_terms:
 
-        if term in text_lower:
+        if re.search(rf"\b{re.escape(term)}\b", text_lower):
             signals.append(term)
 
     return list(set(signals))

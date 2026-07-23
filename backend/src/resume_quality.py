@@ -45,13 +45,18 @@ def detect_keyword_stuffing(
 
     suspicious_words = []
 
+    total_words = len(words)
+
     for word, count in frequencies.items():
 
-        if count > 20:
+        if count >= max(15, total_words * 0.05):
 
             suspicious_words.append({
+
                 "word": word,
+
                 "count": count,
+
             })
 
     return suspicious_words
@@ -75,55 +80,47 @@ def detect_language(
 
     except UnicodeEncodeError:
 
-        return "unknown"
+        return "non-english"
 
 
 def analyze_section_coverage(
-    resume_text: str
+    candidate: dict
 ):
-    """
-    Detect major resume sections.
-    """
-
-    text = resume_text.lower()
 
     return {
 
         "summary":
-            "summary" in text,
+            bool(candidate.get("parsed_summary")),
 
         "education":
-            "education" in text,
+            bool(
+                candidate.get("parsed_degrees")
+                or candidate.get("parsed_universities")
+            ),
 
         "experience":
-            "experience" in text,
+            (
+                candidate.get(
+                    "parsed_experience_years",
+                    0
+                ) > 0
+                or bool(candidate.get("parsed_companies"))
+            ),
 
         "skills":
-            "skills" in text,
+            bool(candidate.get("parsed_skills")),
 
         "projects":
-            "projects" in text,
+            bool(candidate.get("parsed_projects")),
 
         "certifications":
-            (
-                "certification" in text
-                or
-                "certifications" in text
-            ),
+            bool(candidate.get("parsed_certifications")),
 
         "achievements":
-            (
-                "achievement" in text
-                or
-                "achievements" in text
-            ),
+            bool(candidate.get("parsed_achievements")),
 
         "publications":
-            (
-                "publication" in text
-                or
-                "publications" in text
-            ),
+            bool(candidate.get("parsed_publications")),
     }
 
 
@@ -154,39 +151,80 @@ def calculate_resume_completeness(
 
 
 def calculate_resume_quality_score(
+    candidate,
     completeness,
     stuffing_words
 ):
-    """
-    Simple quality score.
-    """
 
-    score = completeness
+    score = completeness * 70
 
-    stuffing_penalty = (
-        len(stuffing_words) * 0.05
+    if candidate.get("parsed_email"):
+        score += 3
+
+    if candidate.get("parsed_phone"):
+        score += 3
+
+    if candidate.get("parsed_linkedin"):
+        score += 2
+
+    if candidate.get("parsed_github"):
+        score += 3
+
+    if candidate.get("parsed_projects"):
+        score += 5
+
+    if candidate.get("parsed_project_impacts"):
+        score += 5
+
+    if candidate.get("parsed_leadership_signals"):
+        score += 3
+
+    if candidate.get("parsed_certifications"):
+        score += 2
+        
+    if candidate.get("parsed_publications"):
+        score += 2
+        
+    if candidate.get("parsed_open_source"):
+        score += 2
+
+    score -= len(stuffing_words) * 5
+
+    return round(
+        max(0, min(score, 100)),
+        2,
     )
-
-    score -= stuffing_penalty
-
-    score = max(score, 0.0)
-
-    return round(score, 2)
 
 
 def analyze_resume_quality(
-    resume_text: str,
+    candidate,
     existing_hashes=None
 ):
     """
     Main quality analysis entrypoint.
     """
 
-    duplicate_info = (
-        detect_duplicate_resume(
-            resume_text,
-            existing_hashes
-        )
+    resume_text = candidate.get(
+        "resume_text",
+        ""
+    )
+    
+    lines = [
+        line
+        for line in resume_text.splitlines()
+        if line.strip()
+    ]
+
+    line_count = len(lines)
+    
+    average_line_length = (
+        sum(len(line) for line in resume_text.splitlines())
+        / max(line_count, 1)
+    )
+    
+    duplicate_info = detect_duplicate_resume(
+        resume_text,
+        existing_hashes
     )
 
     stuffing_words = (
@@ -201,11 +239,10 @@ def analyze_resume_quality(
         )
     )
 
-    section_coverage = (
-        analyze_section_coverage(
-            resume_text
-        )
+    section_coverage = analyze_section_coverage(
+        candidate
     )
+
 
     completeness = (
         calculate_resume_completeness(
@@ -213,12 +250,13 @@ def analyze_resume_quality(
         )
     )
 
-    quality_score = (
-        calculate_resume_quality_score(
-            completeness,
-            stuffing_words
-        )
+    quality_score = calculate_resume_quality_score(
+        candidate,
+        completeness,
+        stuffing_words,
     )
+    
+    word_count = len(resume_text.split())
 
     return {
 
@@ -239,4 +277,15 @@ def analyze_resume_quality(
 
         "keyword_stuffing":
             stuffing_words,
+            
+        "formatting": {
+            "line_count": line_count,
+            "average_line_length": round(average_line_length, 2)
+        },
+        
+        "section_count": sum(
+            section_coverage.values()
+        ),
+        
+        "word_count": word_count,
     }
