@@ -1,140 +1,276 @@
 from __future__ import annotations
 
+import logging
 import re
+from typing import Any, Dict, Iterable, List, Set
 
 from .models import MatchResult
-
 from src.knowledge_graph.services.taxonomy_service import (
     TaxonomyService,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class SkillMatcher:
+    """
+    Performs deterministic skill matching between
+    candidate skills and job requirements.
+    """
 
-    SEMANTIC_ALIASES = {
+    SEMANTIC_ALIASES: Dict[str, List[str]] = {
+        "leadership experience": [
+            "led",
+            "lead",
+            "leading",
+            "team lead",
+            "managed",
+            "management",
+            "manager",
+        ],
+        "mentoring engineers": [
+            "mentor",
+            "mentored",
+            "mentoring",
+            "coached",
+            "trained",
+        ],
+        "rest api development": [
+            "rest api",
+            "rest apis",
+            "restful api",
+            "restful apis",
+            "api development",
+            "built rest api",
+            "built rest apis",
+        ],
+        "cloud deployment": [
+            "deploy",
+            "deployed",
+            "deployment",
+            "deployed applications",
+            "deployed services",
+        ],
+    }
 
-    "leadership experience": [
-        "led",
-        "lead",
-        "leading",
-        "team lead",
-        "managed",
-        "management",
-        "manager",
-    ],
+    def __init__(
+        self,
+        taxonomy: TaxonomyService | None = None,
+    ) -> None:
 
-    "mentoring engineers": [
-        "mentor",
-        "mentored",
-        "mentoring",
-        "coached",
-        "trained",
-    ],
-
-    "rest api development": [
-        "rest api",
-        "rest apis",
-        "restful api",
-        "restful apis",
-        "api development",
-        "built rest api",
-        "built rest apis",
-    ],
-
-    "cloud deployment": [
-        "deploy",
-        "deployed",
-        "deployment",
-        "deployed applications",
-        "deployed services",
-    ],
-}
-    def __init__(self):
-        self.taxonomy = TaxonomyService()
+        self.taxonomy = (
+            taxonomy
+            if taxonomy is not None
+            else TaxonomyService()
+        )
 
     @staticmethod
-    def _normalize(skill: str) -> str:
+    def _normalize(
+        text: str,
+    ) -> str:
 
         return (
-            skill.strip()
+            str(text)
+            .strip()
             .lower()
             .replace("-", " ")
         )
 
+    @classmethod
+    def _normalize_many(
+        cls,
+        values: Iterable[Any],
+    ) -> Dict[str, str]:
+
+        normalized: Dict[str, str] = {}
+
+        for value in values:
+
+            if not value:
+                continue
+
+            key = cls._normalize(value)
+
+            normalized.setdefault(
+                key,
+                str(value),
+            )
+
+        return normalized
+
+    @classmethod
+    def _candidate_skill_map(
+        cls,
+        candidate: Dict[str, Any],
+    ) -> Dict[str, str]:
+
+        skills = cls._normalize_many(
+            candidate.get(
+                "parsed_skills",
+                [],
+            )
+        )
+
+        projects = cls._normalize_many(
+            candidate.get(
+                "parsed_project_technologies",
+                [],
+            )
+        )
+
+        skills.update(
+            {
+                k: v
+                for k, v in projects.items()
+                if k not in skills
+            }
+        )
+
+        return skills
+
+    @classmethod
+    def _alias_patterns(
+        cls,
+        required_skill: str,
+        display_name: str,
+    ) -> List[re.Pattern]:
+
+        aliases = cls.SEMANTIC_ALIASES.get(
+            required_skill,
+            [display_name],
+        )
+
+        return [
+            re.compile(
+                rf"\b{re.escape(cls._normalize(alias))}\b"
+            )
+            for alias in aliases
+        ]
+
     def match(
         self,
-        candidate : dict,
-        required_skills: list[str],
+        candidate: Dict[str, Any],
+        required_skills: List[str],
     ) -> MatchResult:
+
+        if not isinstance(candidate, dict):
+            raise TypeError(
+                "Candidate must be a dictionary."
+            )
 
         result = MatchResult()
 
-        if not required_skills:
-            result.score = 100.0
-            result.evidence.append("Job does not specify required skills.")
-            return result
+        try:
 
-        required_lookup = {}
-        normalized_required_skills = []
+            if not required_skills:
 
-        for skill in required_skills:
-            if not skill:
-                continue
-
-            normalized = self._normalize(skill)
-
-            if normalized not in required_lookup:
-                required_lookup[normalized] = skill
-                normalized_required_skills.append(normalized)
-
-        candidate_map = {}
-
-        for skill in candidate.get("parsed_skills", []):
-            if not skill:
-                continue
-            candidate_map[self._normalize(skill)] = skill
-
-        for skill in candidate.get("parsed_project_technologies", []):
-            if not skill:
-                continue
-            candidate_map.setdefault(self._normalize(skill), skill)
-
-        resume_text = self._normalize(candidate.get("resume_text", ""))
-
-        matched = []
-        missing = []
-        evidence = []
-
-        for normalized_required in normalized_required_skills:
-            display_name = required_lookup[normalized_required]
-
-            if normalized_required in candidate_map:
-                matched_flag = True
-            else:
-                aliases = self.SEMANTIC_ALIASES.get(normalized_required, [display_name])
-
-                matched_flag = any(
-                    re.search(rf"\b{re.escape(self._normalize(alias))}\b", resume_text)
-                    for alias in aliases
+                result.score = 100.0
+                result.evidence.append(
+                    "Job does not specify required skills."
                 )
 
-            if matched_flag:
-                matched.append(display_name)
+                return result
 
-                category = self.taxonomy.get_skill_category(normalized_required)
+            required_lookup = self._normalize_many(
+                required_skills
+            )
 
-                if category:
-                    evidence.append(f"Matched '{display_name}' ({category})")
+            candidate_map = self._candidate_skill_map(
+                candidate
+            )
+
+            resume_text = self._normalize(
+                candidate.get(
+                    "resume_text",
+                    "",
+                )
+            )
+
+            matched: List[str] = []
+            missing: List[str] = []
+            evidence: List[str] = []
+
+            for (
+                normalized_required,
+                display_name,
+            ) in required_lookup.items():
+
+                matched_flag = (
+                    normalized_required
+                    in candidate_map
+                )
+
+                if not matched_flag:
+
+                    patterns = self._alias_patterns(
+                        normalized_required,
+                        display_name,
+                    )
+
+                    matched_flag = any(
+                        pattern.search(
+                            resume_text
+                        )
+                        for pattern in patterns
+                    )
+
+                if matched_flag:
+
+                    matched.append(
+                        display_name
+                    )
+
+                    category = (
+                        self.taxonomy.get_skill_category(
+                            normalized_required
+                        )
+                    )
+
+                    if category:
+
+                        evidence.append(
+                            f"Matched '{display_name}' ({category})"
+                        )
+
+                    else:
+
+                        evidence.append(
+                            f"Matched '{display_name}'"
+                        )
+
                 else:
-                    evidence.append(f"Matched '{display_name}'")
-            else:
-                missing.append(display_name)
-                evidence.append(f"Missing '{display_name}'")
 
-        result.matched = sorted(matched)
-        result.missing = sorted(missing)
-        result.evidence = evidence
+                    missing.append(
+                        display_name
+                    )
 
-        result.score = round(len(matched) / len(normalized_required_skills) * 100, 2) if normalized_required_skills else 0.0
+                    evidence.append(
+                        f"Missing '{display_name}'"
+                    )
 
-        return result
+            result.matched = sorted(
+                set(matched)
+            )
+
+            result.missing = sorted(
+                set(missing)
+            )
+
+            result.evidence = evidence
+
+            result.score = round(
+                len(result.matched)
+                / len(required_lookup)
+                * 100,
+                2,
+            )
+
+            return result
+
+        except Exception:
+
+            logger.exception(
+                "Skill matching failed."
+            )
+
+            raise

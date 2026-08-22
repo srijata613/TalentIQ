@@ -1,246 +1,235 @@
-from typing import Dict, List
+from __future__ import annotations
 
-from .embeddings import (
-    embed_texts,
-    cosine_similarity_matrix
-)
+import logging
+from typing import Any
+
 from .config import DUPLICATE_THRESHOLD
+from .embeddings import (
+    cosine_similarity_matrix,
+    embed_texts,
+)
+
+logger = logging.getLogger(__name__)
+
+IDENTITY_FIELDS = (
+    "parsed_email",
+    "parsed_github",
+    "parsed_linkedin",
+)
+
+SIGNATURE_FIELDS = (
+    "parsed_name",
+    "parsed_email",
+    "parsed_linkedin",
+    "parsed_github",
+)
+
+LIST_SIGNATURE_FIELDS = (
+    "parsed_skills",
+    "parsed_projects",
+    "parsed_companies",
+    "parsed_certifications",
+)
+
 
 def normalize(
-    value
-):
-    if not value:
+    value: Any,
+) -> str:
+
+    if value is None:
         return ""
 
     return str(value).strip().lower()
 
 
 def build_candidate_signature(
-    candidate: Dict
-):
+    candidate: dict[str, Any],
+) -> str:
 
-    parts = []
-
-    parts.append(
-        candidate.get(
-            "parsed_name",
-            ""
+    if not isinstance(candidate, dict):
+        raise TypeError(
+            "candidate must be a dictionary."
         )
-    )
 
-    parts.append(
-        candidate.get(
-            "parsed_email",
-            ""
+    parts: list[str] = []
+
+    for field in SIGNATURE_FIELDS:
+
+        value = normalize(
+            candidate.get(field)
         )
-    )
 
-    parts.append(
-        candidate.get(
-            "parsed_linkedin",
-            ""
+        if value:
+            parts.append(value)
+
+    for field in LIST_SIGNATURE_FIELDS:
+
+        values = candidate.get(field, [])
+
+        if not isinstance(values, list):
+            continue
+
+        parts.extend(
+            normalize(item)
+            for item in values
+            if item
         )
-    )
 
-    parts.append(
-        candidate.get(
-            "parsed_github",
-            ""
-        )
-    )
-
-    parts.extend(
-        candidate.get(
-            "parsed_skills",
-            []
-        )
-    )
-
-    parts.extend(
-        candidate.get(
-            "parsed_projects",
-            []
-        )
-    )
-
-    parts.extend(
-        candidate.get(
-            "parsed_companies",
-            []
-        )
-    )
-
-    parts.extend(
-        candidate.get(
-            "parsed_certifications",
-            []
-        )
-    )
-
-    return " ".join(
-        str(x)
-        for x in parts
-        if x
-    )
+    return " ".join(parts)
 
 
 def exact_identity_match(
-    candidate_a,
-    candidate_b
-):
+    candidate_a: dict[str, Any],
+    candidate_b: dict[str, Any],
+) -> bool:
 
-    email_a = normalize(
-        candidate_a.get(
-            "parsed_email"
+    for field in IDENTITY_FIELDS:
+
+        value_a = normalize(
+            candidate_a.get(field)
         )
-    )
 
-    email_b = normalize(
-        candidate_b.get(
-            "parsed_email"
+        value_b = normalize(
+            candidate_b.get(field)
         )
-    )
 
-    if (
-        email_a
-        and email_b
-        and email_a == email_b
-    ):
-        return True
-
-    github_a = normalize(
-        candidate_a.get(
-            "parsed_github"
-        )
-    )
-
-    github_b = normalize(
-        candidate_b.get(
-            "parsed_github"
-        )
-    )
-
-    if (
-        github_a
-        and github_b
-        and github_a == github_b
-    ):
-        return True
-
-    linkedin_a = normalize(
-        candidate_a.get(
-            "parsed_linkedin"
-        )
-    )
-
-    linkedin_b = normalize(
-        candidate_b.get(
-            "parsed_linkedin"
-        )
-    )
-
-    if (
-        linkedin_a
-        and linkedin_b
-        and linkedin_a == linkedin_b
-    ):
-        return True
+        if (
+            value_a
+            and value_b
+            and value_a == value_b
+        ):
+            return True
 
     return False
 
 
+def _candidate_name(
+    candidate: dict[str, Any],
+    index: int,
+) -> str:
+
+    return (
+        candidate.get("parsed_name")
+        or candidate.get("name")
+        or f"candidate_{index}"
+    )
+
+
 def detect_duplicates(
-    candidates: List[Dict],
-    DUPLICATE_THRESHOLD: float = 0.75
-):
+    candidates: list[dict[str, Any]],
+    threshold: float = DUPLICATE_THRESHOLD,
+) -> list[dict[str, Any]]:
 
-    duplicates = []
-
-    signatures = [
-        build_candidate_signature(
-            candidate
+    if not isinstance(candidates, list):
+        raise TypeError(
+            "candidates must be a list."
         )
-        for candidate in candidates
-    ]
 
-    embeddings = embed_texts(
-        signatures
-    )
+    try:
 
-    similarity = (
-        cosine_similarity_matrix(
-            embeddings,
-            embeddings
+        if len(candidates) < 2:
+            return []
+
+        signatures = [
+            build_candidate_signature(
+                candidate
+            )
+            for candidate in candidates
+        ]
+
+        embeddings = embed_texts(
+            signatures
         )
-    )
 
-    for i in range(
-        len(candidates)
-    ):
+        similarity = (
+            cosine_similarity_matrix(
+                embeddings,
+                embeddings,
+            )
+        )
 
-        for j in range(
-            i + 1,
+        duplicates: list[
+            dict[str, Any]
+        ] = []
+
+        for i in range(
             len(candidates)
         ):
 
-            if exact_identity_match(
-                candidates[i],
-                candidates[j]
+            for j in range(
+                i + 1,
+                len(candidates),
             ):
 
-                duplicates.append(
-                    {
-                        "candidate_a":
-                            candidates[i].get(
-                                "name",
-                                f"candidate_{i}"
-                            ),
+                if exact_identity_match(
+                    candidates[i],
+                    candidates[j],
+                ):
 
-                        "candidate_b":
-                            candidates[j].get(
-                                "name",
-                                f"candidate_{j}"
-                            ),
+                    duplicates.append(
+                        {
 
-                        "similarity":
-                            1.0,
+                            "candidate_a":
+                                _candidate_name(
+                                    candidates[i],
+                                    i,
+                                ),
 
-                        "reason":
-                            "Exact identity match"
-                    }
+                            "candidate_b":
+                                _candidate_name(
+                                    candidates[j],
+                                    j,
+                                ),
+
+                            "similarity":
+                                1.0,
+
+                            "reason":
+                                "Exact identity match",
+                        }
+                    )
+
+                    continue
+
+                score = float(
+                    similarity[i][j]
                 )
 
-                continue
-
-            score = float(
-                similarity[i][j]
-            )
-
-            if score >= DUPLICATE_THRESHOLD:
+                if score < threshold:
+                    continue
 
                 duplicates.append(
                     {
+
                         "candidate_a":
-                            candidates[i].get(
-                                "name",
-                                f"candidate_{i}"
+                            _candidate_name(
+                                candidates[i],
+                                i,
                             ),
 
                         "candidate_b":
-                            candidates[j].get(
-                                "name",
-                                f"candidate_{j}"
+                            _candidate_name(
+                                candidates[j],
+                                j,
                             ),
 
                         "similarity":
                             round(
                                 score,
-                                4
+                                4,
                             ),
 
                         "reason":
-                            "Semantic profile match"
+                            "Semantic profile match",
                     }
                 )
 
-    return duplicates
+        return duplicates
+
+    except Exception:
+
+        logger.exception(
+            "Duplicate detection failed."
+        )
+
+        raise

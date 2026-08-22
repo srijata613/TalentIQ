@@ -9,7 +9,7 @@ import os
 from src.pdf_extractor import extract_pdf_text
 
 from src.parsing import (
-    TECHNICAL_SKILLS,
+    get_technologies,
     extract_skills_dictionary,
     extract_experience_requirement,
     extract_education_requirement,
@@ -54,7 +54,7 @@ def analyze_job(request: AnalyzeRequest):
 
     required_skills = extract_skills_dictionary(
         request.content,
-        TECHNICAL_SKILLS
+        get_technologies(),
     )
     
     experience = extract_experience_requirement(

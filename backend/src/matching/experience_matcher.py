@@ -1,222 +1,264 @@
 from __future__ import annotations
 
-from .models import MatchResult
+import logging
+from typing import Any, Dict, List
 
+from .models import MatchResult
 from src.experience_scoring import (
     compute_experience_alignment,
     normalize_experience_score,
 )
 
+logger = logging.getLogger(__name__)
+
+EXPERIENCE_WEIGHTS = {
+    "semantic": 0.40,
+    "years": 0.25,
+    "responsibility": 0.20,
+    "leadership": 0.10,
+    "impact": 0.05,
+}
+
+HIGH_SIMILARITY_THRESHOLD = 0.70
+MAX_LEADERSHIP_SIGNALS = 5
+IMPACT_POINTS = 25
+
 
 class ExperienceMatcher:
+    """
+    Performs experience matching using semantic similarity,
+    years of experience, leadership, responsibilities,
+    and quantified project impact.
+    """
 
     @staticmethod
     def _normalize(text: str) -> str:
-
         return (
-            text.lower()
+            str(text)
+            .lower()
             .strip()
             .replace("-", " ")
         )
 
-    def match(
-        self,
-        candidate: dict,
-        job: dict,
-    ) -> MatchResult:
+    @staticmethod
+    def _clamp(score: float) -> float:
+        return max(0.0, min(score, 100.0))
 
-        result = MatchResult()
-
-        resume_text = candidate.get(
-            "resume_text",
-            ""
-        )
-
-        jd_text = job.get(
-            "content",
-            ""
-        )
-
-        if not resume_text.strip():
-
-            result.evidence.append(
-                "Resume text unavailable."
-            )
-
-            return result
-
-        if not jd_text.strip():
-
-            result.score = 100.0
-
-            result.evidence.append(
-                "Job description unavailable."
-            )
-
-            return result
-
-        # Semantic Similarity
-        alignment_score, sentence_scores = (
-            compute_experience_alignment(
-                jd_text,
-                resume_text,
-            )
-        )
-
-        semantic_score = (
-            normalize_experience_score(
-                alignment_score
-            ) * 100
-        )
-
-        # Years of Experience
-        candidate_years = (
-            candidate.get(
-                "parsed_experience_years",
-                0,
-            ) or 0
-        )
-
-        required_years = (
-            job.get(
-                "experience_years",
-                0,
-            ) or 0
-        )
+    @staticmethod
+    def _years_score(
+        candidate_years: float,
+        required_years: float,
+    ) -> float:
 
         if required_years <= 0:
+            return 100.0
 
-            years_score = 100.0
-
-        else:
-
-            years_score = min(
-                (
-                    candidate_years
-                    / required_years
-                )
-                * 100,
-                100,
-            )
-
-        # Responsibilities
-        responsibilities = [
-            self._normalize(r)
-            for r in job.get(
-                "responsibilities",
-                [],
-            )
-        ]
-
-        resume_lower = self._normalize(
-            resume_text
+        return min(
+            (candidate_years / required_years) * 100,
+            100.0,
         )
 
-        matched_responsibilities = 0
+    def _responsibility_score(
+        self,
+        resume_text: str,
+        responsibilities: List[str],
+    ) -> tuple[float, int]:
+
+        if not responsibilities:
+            return 100.0, 0
+
+        resume = self._normalize(resume_text)
+
+        matched = 0
 
         for responsibility in responsibilities:
 
-            keywords = responsibility.split()
+            normalized = self._normalize(
+                responsibility
+            )
 
-            if any(
-                keyword in resume_lower
-                for keyword in keywords
-            ):
-                matched_responsibilities += 1
+            if normalized in resume:
+                matched += 1
 
-        if responsibilities:
-
-            responsibility_score = (
-                matched_responsibilities
-                / len(responsibilities)
-            ) * 100
-
-        else:
-
-            responsibility_score = 100
-
-        # Leadership
-        leadership_signals = candidate.get(
-            "parsed_leadership_signals",
-            [],
-        )
-        
-        leadership_score = min(
-            len(leadership_signals) / 5,
-            1.0,
+        score = (
+            matched / len(responsibilities)
         ) * 100
 
-        # Quantified Impact
-        impacts = candidate.get(
-            "parsed_project_impacts",
-            [],
-        )
+        return score, matched
 
-        impact_score = min(
-            len(impacts) * 25,
-            100,
-        )
+    def match(
+        self,
+        candidate: Dict[str, Any],
+        job: Dict[str, Any],
+    ) -> MatchResult:
 
-        # Final Score
-        result.score = round(
-
-            semantic_score * 0.40
-
-            + years_score * 0.25
-
-            + responsibility_score * 0.20
-
-            + leadership_score * 0.10
-
-            + impact_score * 0.05,
-
-            2,
-        )
-
-        # Evidence
-        high_matches = sum(
-            score >= 0.70
-            for score in sentence_scores
-        )
-
-        result.evidence.append(
-
-            f"{high_matches} responsibilities strongly matched."
-
-        )
-
-        result.evidence.append(
-
-            f"Semantic similarity: {alignment_score:.2%}"
-
-        )
-
-        result.evidence.append(
-
-            f"Experience: {candidate_years} / {required_years} years"
-
-        )
-
-        result.evidence.append(
-
-            f"Responsibilities matched: {matched_responsibilities}/{len(responsibilities)}"
-
-        )
-
-        if leadership_score > 0:
-
-            result.evidence.append(
-
-                "Leadership experience detected."
-
+        if not isinstance(candidate, dict):
+            raise TypeError(
+                "Candidate must be a dictionary."
             )
 
-        if impacts:
-
-            result.evidence.append(
-
-                f"{len(impacts)} quantified achievements detected."
-
+        if not isinstance(job, dict):
+            raise TypeError(
+                "Job must be a dictionary."
             )
 
-        return result
+        result = MatchResult()
+
+        try:
+
+            resume_text = candidate.get(
+                "resume_text",
+                "",
+            )
+
+            jd_text = job.get(
+                "content",
+                "",
+            )
+
+            if not resume_text.strip():
+
+                result.evidence.append(
+                    "Resume text unavailable."
+                )
+
+                return result
+
+            if not jd_text.strip():
+
+                result.score = 100.0
+
+                result.evidence.append(
+                    "Job description unavailable."
+                )
+
+                return result
+
+
+            alignment_score, sentence_scores = (
+                compute_experience_alignment(
+                    jd_text,
+                    resume_text,
+                )
+            )
+
+            semantic_score = (
+                normalize_experience_score(
+                    alignment_score
+                )
+                * 100
+            )
+
+            candidate_years = (
+                candidate.get(
+                    "parsed_experience_years",
+                    0,
+                )
+                or 0
+            )
+
+            required_years = (
+                job.get(
+                    "experience_years",
+                    0,
+                )
+                or 0
+            )
+
+            years_score = self._years_score(
+                candidate_years,
+                required_years,
+            )
+
+            responsibility_score, matched_resp = (
+                self._responsibility_score(
+                    resume_text,
+                    job.get(
+                        "responsibilities",
+                        [],
+                    ),
+                )
+            )
+
+
+            leadership_score = (
+                min(
+                    len(
+                        candidate.get(
+                            "parsed_leadership_signals",
+                            [],
+                        )
+                    )
+                    / MAX_LEADERSHIP_SIGNALS,
+                    1.0,
+                )
+                * 100
+            )
+
+            impacts = candidate.get(
+                "parsed_project_impacts",
+                [],
+            )
+
+            impact_score = min(
+                len(impacts) * IMPACT_POINTS,
+                100,
+            )
+
+
+            final_score = (
+                semantic_score
+                * EXPERIENCE_WEIGHTS["semantic"]
+                + years_score
+                * EXPERIENCE_WEIGHTS["years"]
+                + responsibility_score
+                * EXPERIENCE_WEIGHTS[
+                    "responsibility"
+                ]
+                + leadership_score
+                * EXPERIENCE_WEIGHTS[
+                    "leadership"
+                ]
+                + impact_score
+                * EXPERIENCE_WEIGHTS["impact"]
+            )
+
+            result.score = round(
+                self._clamp(final_score),
+                2,
+            )
+
+            
+            high_matches = sum(
+                score >= HIGH_SIMILARITY_THRESHOLD
+                for score in sentence_scores
+            )
+
+            result.evidence.extend(
+                [
+                    f"{high_matches} responsibilities strongly matched.",
+                    f"Semantic similarity: {alignment_score:.2%}",
+                    f"Experience: {candidate_years} / {required_years} years",
+                    f"Responsibilities matched: {matched_resp}/{len(job.get('responsibilities', []))}",
+                ]
+            )
+
+            if leadership_score > 0:
+                result.evidence.append(
+                    "Leadership experience detected."
+                )
+
+            if impacts:
+                result.evidence.append(
+                    f"{len(impacts)} quantified achievements detected."
+                )
+
+            return result
+
+        except Exception:
+
+            logger.exception(
+                "Experience matching failed."
+            )
+
+            raise

@@ -1,170 +1,174 @@
 from __future__ import annotations
 
-from copy import deepcopy
-from typing import Dict
+import logging
+from typing import Any, Dict, Optional
 
+from src.candidate_intelligence import build_candidate_intelligence
+from src.candidate_profile_generator import CandidateProfileGenerator
+from src.graph_service import GraphService
 from src.llm.parser import parse_job_with_llm
+from src.matching.matcher import Matcher
 from src.parsing import (
-    ALL_SKILLS,
+    get_all_skills,
     extract_skills_dictionary,
 )
-from src.graph_service import GraphService
-from src.risk_assessment import calculate_risk_score
 from src.recommendations import generate_recommendations
-from src.candidate_intelligence import (
-    build_candidate_intelligence,
-)
+from src.risk_assessment import calculate_risk_score
 
-from src.candidate_profile_generator import (
-    CandidateProfileGenerator,
-)
+logger = logging.getLogger(__name__)
 
-from src.matching.matcher import (
-    Matcher,
-)
 
 class CandidatePipeline:
+    """
+    Executes the complete TalentIQ candidate processing pipeline.
+    """
 
-    def __init__(self):
+    def __init__(
+        self,
+        graph_service: Optional[GraphService] = None,
+        matcher: Optional[Matcher] = None,
+        profile_generator: Optional[CandidateProfileGenerator] = None,
+    ) -> None:
 
-        self.graph_service = GraphService()
-        
-        self.matcher = Matcher()
-        
+        self.graph_service = graph_service or GraphService()
+        self.matcher = matcher or Matcher()
         self.profile_generator = (
-            CandidateProfileGenerator()
+            profile_generator or CandidateProfileGenerator()
         )
 
     def process(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
         jd_text: str = "",
-    ) -> Dict:
+    ) -> Dict[str, Any]:
+        """
+        Execute the complete candidate pipeline.
+        """
 
-        candidate = deepcopy(candidate)
+        if not isinstance(candidate, dict):
+            raise TypeError("Candidate must be a dictionary.")
 
-        self._build_graph(candidate)
+        job = self._parse_job(jd_text)
 
-        self._calculate_risk(candidate)
-        
-        job = self._match_candidate(
+        self._safe_stage(
+            "graph",
+            self._build_graph,
             candidate,
-            jd_text,
         )
 
-        self._generate_recommendations(
-            candidate
+        self._safe_stage(
+            "risk",
+            self._calculate_risk,
+            candidate,
         )
-        
-        self._candidate_intelligence(
+
+        self._safe_stage(
+            "matching",
+            self._match_candidate,
             candidate,
             job,
         )
-                
-        self._generate_ai_profile(
-            candidate
+
+        self._safe_stage(
+            "recommendations",
+            self._generate_recommendations,
+            candidate,
+        )
+
+        self._safe_stage(
+            "candidate_intelligence",
+            self._candidate_intelligence,
+            candidate,
+            job,
+        )
+
+        self._safe_stage(
+            "ai_profile",
+            self._generate_ai_profile,
+            candidate,
         )
 
         return candidate
 
+    def _safe_stage(
+        self,
+        stage_name: str,
+        fn,
+        *args,
+    ) -> None:
+
+        try:
+            fn(*args)
+
+        except Exception:
+            logger.exception(
+                "Pipeline stage '%s' failed.",
+                stage_name,
+            )
+
+    def _parse_job(
+        self,
+        jd_text: str,
+    ) -> Dict[str, Any]:
+
+        if not jd_text.strip():
+            return self._fallback_job("")
+
+        try:
+            return parse_job_with_llm(jd_text)
+
+        except Exception:
+            logger.exception(
+                "LLM job parsing failed."
+            )
+            return self._fallback_job(jd_text)
+
+    @staticmethod
+    def _fallback_job(
+        jd_text: str,
+    ) -> Dict[str, Any]:
+
+        return {
+            "content": jd_text,
+            "required_skills": extract_skills_dictionary(
+                jd_text,
+                get_all_skills(),
+            ),
+            "preferred_skills": [],
+            "experience_years": 0,
+            "education": [],
+            "certifications": [],
+            "responsibilities": [],
+            "technologies": [],
+            "tools": [],
+            "industry": None,
+            "domain": None,
+            "seniority": None,
+        }
+
     def _build_graph(
         self,
-        candidate: Dict,
-    ):
+        candidate: Dict[str, Any],
+    ) -> None:
 
         candidate["candidate_graph"] = (
-            self.graph_service
-            .build_candidate_graph(candidate)
+            self.graph_service.build_candidate_graph(candidate)
         )
 
     def _calculate_risk(
         self,
-        candidate: Dict,
-    ):
+        candidate: Dict[str, Any],
+    ) -> None:
 
         candidate["risk_assessment"] = (
             calculate_risk_score(candidate)
         )
 
-    def _generate_recommendations(
-        self,
-        candidate: Dict,
-    ):
-
-        candidate_match = candidate.get(
-        "candidate_match"
-        )
-
-        if candidate_match is None:
-            missing_skills = []
-
-        else:
-            missing_skills = (
-                candidate_match
-                .skill_match
-                .missing
-            )
-
-        candidate[
-            "recommendations"
-        ] = generate_recommendations(
-            missing_skills=missing_skills,
-            candidate_skills=candidate.get(
-                "parsed_skills",
-                [],
-            ),
-        )
-
-    def _candidate_intelligence(
-        self,
-        candidate: Dict,
-        job: Dict,
-    ):
-
-        intelligence = (
-            build_candidate_intelligence(
-                candidate,
-                job.get("required_skills", [])
-            )
-        )
-
-        candidate.update(
-            intelligence
-        )
-        
     def _match_candidate(
         self,
-        candidate: Dict,
-        jd_text: str,
-    ) -> Dict:
-
-        try:
-            job = parse_job_with_llm(jd_text)
-            
-            print("=" * 80)
-            print(job)
-            print("=" * 80)
-            
-        except Exception:
-            job = {
-                
-                "content": jd_text,
-                "required_skills": extract_skills_dictionary(
-                    jd_text,
-                    ALL_SKILLS,
-                ),
-                
-                "preferred_skills": [],
-                "experience_years": 0,
-                "education": [],
-                "certifications": [],
-                "responsibilities": [],
-                "technologies": [],
-                "tools": [],
-                "industry": None,
-                "domain": None,
-                "seniority": None,
-            }
+        candidate: Dict[str, Any],
+        job: Dict[str, Any],
+    ) -> None:
 
         candidate["candidate_match"] = (
             self.matcher.match(
@@ -172,13 +176,56 @@ class CandidatePipeline:
                 job,
             )
         )
-        
-        return job
-    
+
+    def _generate_recommendations(
+        self,
+        candidate: Dict[str, Any],
+    ) -> None:
+
+        candidate_match = candidate.get(
+            "candidate_match"
+        )
+
+        missing_skills = []
+
+        if (
+            candidate_match is not None
+            and hasattr(candidate_match, "skill_match")
+        ):
+            missing_skills = (
+                candidate_match.skill_match.missing
+            )
+
+        candidate["recommendations"] = (
+            generate_recommendations(
+                missing_skills=missing_skills,
+                candidate_skills=candidate.get(
+                    "parsed_skills",
+                    [],
+                ),
+            )
+        )
+
+    def _candidate_intelligence(
+        self,
+        candidate: Dict[str, Any],
+        job: Dict[str, Any],
+    ) -> None:
+
+        candidate.update(
+            build_candidate_intelligence(
+                candidate,
+                job.get(
+                    "required_skills",
+                    [],
+                ),
+            )
+        )
+
     def _generate_ai_profile(
         self,
-        candidate: Dict,
-    ):
+        candidate: Dict[str, Any],
+    ) -> None:
 
         candidate["ai_profile"] = (
             self.profile_generator.generate(

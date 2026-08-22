@@ -1,139 +1,98 @@
-from .models import (
-    CandidateMatch,
-)
+from __future__ import annotations
 
-from .skill_matcher import (
-    SkillMatcher,
-)
+import logging
+from typing import Any, Dict, Iterable, List, Optional
 
-from .experience_matcher import (
-    ExperienceMatcher,
-)
+from src.config import MATCHING_WEIGHTS
 
-from .education_matcher import (
-    EducationMatcher,
-)
+from .certification_matcher import CertificationMatcher
+from .context_matcher import ContextMatcher
+from .education_matcher import EducationMatcher
+from .experience_matcher import ExperienceMatcher
+from .models import CandidateMatch
+from .project_matcher import ProjectMatcher
+from .skill_matcher import SkillMatcher
 
-from .certification_matcher import (
-    CertificationMatcher,
-)
-
-from .project_matcher import (
-    ProjectMatcher,
-)
-
-from .context_matcher import (
-    ContextMatcher,
-)
-
-from src.config import (
-    MATCHING_WEIGHTS,
-)
+logger = logging.getLogger(__name__)
 
 
 class Matcher:
+    """
+    Production-grade candidate matcher.
 
-    def __init__(self):
+    Executes every scoring module and aggregates the final score,
+    evidence, metadata and recruiter confidence.
+    """
 
-        self.skill_matcher = SkillMatcher()
+    def __init__(
+        self,
+        skill_matcher: Optional[SkillMatcher] = None,
+        experience_matcher: Optional[ExperienceMatcher] = None,
+        education_matcher: Optional[EducationMatcher] = None,
+        certification_matcher: Optional[CertificationMatcher] = None,
+        project_matcher: Optional[ProjectMatcher] = None,
+        context_matcher: Optional[ContextMatcher] = None,
+    ) -> None:
 
+        self.skill_matcher = skill_matcher or SkillMatcher()
         self.experience_matcher = (
-            ExperienceMatcher()
+            experience_matcher or ExperienceMatcher()
         )
-
         self.education_matcher = (
-            EducationMatcher()
+            education_matcher or EducationMatcher()
         )
-
         self.certification_matcher = (
-            CertificationMatcher()
+            certification_matcher or CertificationMatcher()
         )
-
         self.project_matcher = (
-            ProjectMatcher()
+            project_matcher or ProjectMatcher()
         )
-
         self.context_matcher = (
-            ContextMatcher()
+            context_matcher or ContextMatcher()
         )
 
     def match(
         self,
-        candidate: dict,
-        job: dict,
+        candidate: Dict[str, Any],
+        job: Dict[str, Any],
     ) -> CandidateMatch:
 
         result = CandidateMatch()
 
-        result.skill_match = (
-            self.skill_matcher.match(
-                candidate,
-                job.get(
-                    "required_skills",
-                    [],
-                ),
-            )
+        result.skill_match = self._safe_match(
+            self.skill_matcher.match,
+            candidate,
+            job.get("required_skills", []),
         )
 
-        result.experience_match = (
-            self.experience_matcher.match(
-                candidate,
-                job,
-            )
+        result.experience_match = self._safe_match(
+            self.experience_matcher.match,
+            candidate,
+            job,
         )
 
-        result.education_match = (
-            self.education_matcher.match(
-                candidate,
-                job.get(
-                    "content",
-                    "",
-                ),
-            )
+        result.education_match = self._safe_match(
+            self.education_matcher.match,
+            candidate,
+            job.get("content", ""),
         )
 
-        result.certification_match = (
-            self.certification_matcher.match(
-                candidate,
-                job,
-            )
+        result.certification_match = self._safe_match(
+            self.certification_matcher.match,
+            candidate,
+            job,
         )
 
-        result.project_match = (
-            self.project_matcher.match(
-                candidate,
-                job,
-            )
+        result.project_match = self._safe_match(
+            self.project_matcher.match,
+            candidate,
+            job,
         )
 
-        result.context_match = (
-            self.context_matcher.match(
-                candidate,
-                job,
-            )
-        )
-
-        weights = MATCHING_WEIGHTS
-
-        result.overall_score = round(
-            result.skill_match.score
-            * weights.get("skill", 0)
-            +
-            result.experience_match.score
-            * weights.get("experience", 0)
-            +
-            result.education_match.score
-            * weights.get("education", 0)
-            +
-            result.certification_match.score
-            * weights.get("certification", 0)
-            +
-            result.project_match.score
-            * weights.get("project", 0)
-            +
-            result.context_match.score
-            * weights.get("context", 0),
-            2,
+        result.context_match = self._safe_match(
+            self.context_matcher.match,
+            candidate,
+            job,
         )
 
         matches = [
@@ -145,42 +104,116 @@ class Matcher:
             result.context_match,
         ]
 
-        for match in matches:
-            result.evidence.extend(match.evidence)
+        result.overall_score = self._calculate_score(matches)
 
-        result.evidence = list(
-            dict.fromkeys(result.evidence)
+        result.evidence = self._collect_evidence(matches)
+
+        self._populate_metadata(result, matches)
+
+        return result
+
+    def _safe_match(
+        self,
+        matcher,
+        *args,
+    ):
+
+        try:
+            return matcher(*args)
+
+        except Exception:
+            logger.exception(
+                "Matcher '%s' failed.",
+                matcher.__qualname__,
+            )
+
+            return type("Fallback", (), {
+                "score": 0.0,
+                "evidence": [],
+            })()
+
+    @staticmethod
+    def _calculate_score(
+        matches: List[Any],
+    ) -> float:
+
+        weights = (
+            MATCHING_WEIGHTS
+            if isinstance(MATCHING_WEIGHTS, dict)
+            else {}
         )
 
-        result.metadata.total_evidence = len(result.evidence)
+        keys = (
+            "skill",
+            "experience",
+            "education",
+            "certification",
+            "project",
+            "context",
+        )
+
+        score = sum(
+            getattr(match, "score", 0)
+            * weights.get(key, 0)
+            for key, match in zip(keys, matches)
+        )
+
+        return round(score, 2)
+
+    @staticmethod
+    def _collect_evidence(
+        matches: Iterable[Any],
+    ) -> List[str]:
+
+        evidence: List[str] = []
+
+        for match in matches:
+            evidence.extend(
+                getattr(match, "evidence", [])
+            )
+
+        return list(dict.fromkeys(evidence))
+
+    @staticmethod
+    def _populate_metadata(
+        result: CandidateMatch,
+        matches: List[Any],
+    ) -> None:
+
+        scores = [
+            getattr(m, "score", 0)
+            for m in matches
+        ]
+
+        result.metadata.total_evidence = len(
+            result.evidence
+        )
 
         result.metadata.matched_categories = sum(
-            1 for m in matches
-            if m.score >= 70
+            score >= 70
+            for score in scores
         )
 
         result.metadata.strong_categories = sum(
-            1 for m in matches
-            if m.score >= 85
+            score >= 85
+            for score in scores
         )
 
         result.metadata.weak_categories = sum(
-            1 for m in matches
-            if m.score < 50
+            score < 50
+            for score in scores
         )
 
         confidence = (
             result.overall_score * 0.7
-            +
-            min(
+            + min(
                 result.metadata.total_evidence,
                 20,
-            ) * 1.5
+            )
+            * 1.5
         )
 
         result.metadata.overall_confidence = round(
             min(confidence, 100.0),
             2,
         )
-
-        return result

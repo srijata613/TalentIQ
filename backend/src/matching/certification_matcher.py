@@ -1,73 +1,123 @@
 from __future__ import annotations
 
+import logging
+from typing import Any, Dict, Iterable, Set
+
 from .models import MatchResult
+
+logger = logging.getLogger(__name__)
 
 
 class CertificationMatcher:
+    """
+    Matches candidate certifications against
+    job certification requirements.
+    """
+
+    @staticmethod
+    def _normalize(value: str) -> str:
+        return (
+            str(value)
+            .strip()
+            .lower()
+        )
+
+    @classmethod
+    def _normalize_set(
+        cls,
+        values: Iterable[Any],
+    ) -> Set[str]:
+
+        return {
+            cls._normalize(value)
+            for value in values
+            if isinstance(value, str)
+            and value.strip()
+        }
 
     def match(
         self,
-        candidate: dict,
-        job: dict,
+        candidate: Dict[str, Any],
+        job: Dict[str, Any],
     ) -> MatchResult:
+
+        if not isinstance(candidate, dict):
+            raise TypeError(
+                "Candidate must be a dictionary."
+            )
+
+        if not isinstance(job, dict):
+            raise TypeError(
+                "Job must be a dictionary."
+            )
 
         result = MatchResult()
 
-        candidate_certs = {
-            cert.strip().lower()
-            for cert in candidate.get(
-                "parsed_certifications",
-                []
+        try:
+
+            candidate_certs = self._normalize_set(
+                candidate.get(
+                    "parsed_certifications",
+                    [],
+                )
             )
-            if isinstance(cert, str) and cert.strip()
-        }
 
-        required_certs = {
-            cert.strip().lower()
-            for cert in job.get(
-                "certifications",
-                []
+            required_certs = self._normalize_set(
+                job.get(
+                    "certifications",
+                    [],
+                )
             )
-            if isinstance(cert, str) and cert.strip()
-        }
 
-        if not required_certs:
+            if not required_certs:
 
-            result.score = 100.0
+                result.score = 100.0
 
-            result.evidence.append(
-                "Job does not require certifications."
+                result.evidence.append(
+                    "Job does not require certifications."
+                )
+
+                return result
+
+            result.matched = sorted(
+                candidate_certs
+                & required_certs
+            )
+
+            result.missing = sorted(
+                required_certs
+                - candidate_certs
+            )
+
+            result.score = round(
+                (
+                    len(result.matched)
+                    / len(required_certs)
+                )
+                * 100,
+                2,
+            )
+
+            result.evidence.extend(
+                [
+                    f"Certification matched: {cert}"
+                    for cert in result.matched
+                ]
+            )
+
+            result.evidence.extend(
+                [
+                    f"Missing certification: {cert}"
+                    for cert in result.missing
+                ]
             )
 
             return result
 
-        result.matched = sorted(
-            list(candidate_certs & required_certs)
-        )
+        except Exception:
 
-        result.missing = sorted(
-            list(required_certs - candidate_certs)
-        )
-
-        result.score = round(
-            (
-                len(result.matched)
-                / len(required_certs)
-            )
-            * 100,
-            2,
-        )
-
-        for cert in result.matched:
-
-            result.evidence.append(
-                f"Certification matched: {cert}"
+            logger.exception(
+                "Certification matching failed."
             )
 
-        for cert in result.missing:
-
-            result.evidence.append(
-                f"Missing certification: {cert}"
-            )
-
-        return result
+            raise

@@ -1,202 +1,271 @@
-from typing import Dict, List
+from __future__ import annotations
 
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+MAX_TAKEAWAY_ITEMS = 3
 
 class RecruiterInsights:
+
     def build(
         self,
-        explanation: Dict,
-        summary: Dict,
-    ) -> Dict:
+        explanation: dict[str, Any],
+        summary: dict[str, Any],
+    ) -> dict[str, Any]:
 
-        recommendation = explanation.get(
-            "hiring_recommendation",
-            {}
-        )
+        if not isinstance(explanation, dict):
+            raise TypeError(
+                "explanation must be a dictionary."
+            )
 
-        confidence = explanation.get(
-            "confidence",
-            {}
-        )
+        if not isinstance(summary, dict):
+            raise TypeError(
+                "summary must be a dictionary."
+            )
 
-        return {
+        try:
 
-            "key_takeaways":
-                self._key_takeaways(
-                    explanation,
-                    summary,
-                ),
+            recommendation = explanation.get(
+                "hiring_recommendation",
+                {},
+            )
 
-            "positive_signals":
-                self._positive_signals(
-                    explanation,
-                ),
+            confidence = explanation.get(
+                "confidence",
+                {},
+            )
 
-            "risk_flags":
-                self._risk_flags(
-                    explanation,
-                ),
+            return {
 
-            "interview_priorities":
-                self._interview_priorities(
-                    explanation,
-                ),
-
-            "decision_support": {
-
-                "decision":
-                    recommendation.get(
-                        "decision",
-                        "Unknown",
+                "key_takeaways":
+                    self._key_takeaways(
+                        summary,
                     ),
 
-                "priority":
-                    recommendation.get(
-                        "priority",
-                        "Medium",
+                "positive_signals":
+                    self._positive_signals(
+                        explanation,
                     ),
 
-                "confidence":
-                    confidence.get(
-                        "level",
-                        "Unknown",
+                "risk_flags":
+                    self._risk_flags(
+                        explanation,
                     ),
-            },
-        }
+
+                "interview_priorities":
+                    self._interview_priorities(
+                        explanation,
+                    ),
+
+                "decision_support": {
+
+                    "decision":
+                        recommendation.get(
+                            "decision",
+                            "Unknown",
+                        ),
+
+                    "priority":
+                        recommendation.get(
+                            "priority",
+                            "Medium",
+                        ),
+
+                    "confidence":
+                        confidence.get(
+                            "level",
+                            "Unknown",
+                        ),
+                },
+            }
+
+        except Exception:
+
+            logger.exception(
+                "Failed to build recruiter insights."
+            )
+
+            raise
 
     def _key_takeaways(
         self,
-        explanation: Dict,
-        summary: Dict,
-    ) -> List[str]:
+        summary: dict[str, Any],
+    ) -> list[str]:
 
-        takeaways = [
+        takeaways: list[str] = []
 
-            summary.get(
-                "executive_summary",
-                ""
+        executive_summary = summary.get(
+            "executive_summary",
+            "",
+        )
+
+        if executive_summary:
+            takeaways.append(
+                executive_summary
             )
-        ]
 
         strengths = summary.get(
             "top_strengths",
-            []
+            [],
         )
 
         if strengths:
 
             takeaways.append(
-
                 "Strongest areas: "
                 + ", ".join(
-                    strengths[:3]
+                    strengths[
+                        :MAX_TAKEAWAY_ITEMS
+                    ]
                 )
-
             )
 
         gaps = summary.get(
             "top_gaps",
-            []
+            [],
         )
 
         if gaps:
 
             takeaways.append(
-
                 "Primary gaps: "
                 + ", ".join(
-                    gaps[:3]
+                    gaps[
+                        :MAX_TAKEAWAY_ITEMS
+                    ]
                 )
-
             )
 
         return takeaways
 
     def _positive_signals(
         self,
-        explanation: Dict,
-    ) -> List[str]:
+        explanation: dict[str, Any],
+    ) -> list[str]:
 
-        signals = []
+        signals: list[str] = []
 
         for feature in explanation.get(
             "feature_attribution",
-            []
+            [],
         ):
 
-            if feature.get(
-                "impact"
-            ) in (
+            if not isinstance(
+                feature,
+                dict,
+            ):
+                continue
+
+            impact = feature.get(
+                "impact",
+                "",
+            )
+
+            if impact not in (
                 "Strong Positive",
                 "Positive",
             ):
+                continue
 
-                signals.append(
+            name = feature.get(
+                "feature",
+                "Unknown",
+            )
 
-                    f"{feature['feature']} "
-                    f"({feature['score']:.2f})"
-
+            score = float(
+                feature.get(
+                    "score",
+                    0.0,
                 )
+            )
+
+            signals.append(
+                f"{name} ({score:.2f})"
+            )
 
         return signals
 
     def _risk_flags(
         self,
-        explanation: Dict,
-    ) -> List[str]:
+        explanation: dict[str, Any],
+    ) -> list[str]:
 
-        flags = []
+        flags: list[str] = []
 
         for gap in explanation.get(
             "gaps",
-            []
+            [],
         ):
+
+            if not isinstance(
+                gap,
+                dict,
+            ):
+                continue
 
             items = gap.get(
                 "items",
-                []
+                [],
             )
 
-            if items:
+            if not items:
+                continue
 
-                flags.append(
+            category = gap.get(
+                "category",
+                "Unknown",
+            )
 
-                    f"{gap['category']}: "
-                    + ", ".join(items)
-
-                )
+            flags.append(
+                f"{category}: "
+                + ", ".join(items)
+            )
 
         return flags
 
     def _interview_priorities(
         self,
-        explanation: Dict,
-    ) -> List[Dict]:
+        explanation: dict[str, Any],
+    ) -> list[dict[str, Any]]:
 
-        priorities = []
+        priorities: list[
+            dict[str, Any]
+        ] = []
 
         for item in explanation.get(
             "interview_focus",
-            []
+            [],
         ):
 
-            priorities.append({
+            if not isinstance(
+                item,
+                dict,
+            ):
+                continue
 
-                "category":
-                    item.get(
-                        "category"
-                    ),
+            priorities.append(
+                {
 
-                "topics":
-                    item.get(
-                        "topics",
-                        [],
-                    ),
+                    "category":
+                        item.get(
+                            "category",
+                            "Unknown",
+                        ),
 
-                "reason":
-                    item.get(
-                        "reason",
-                        "",
-                    ),
-            })
+                    "topics":
+                        item.get(
+                            "topics",
+                            [],
+                        ),
+
+                    "reason":
+                        item.get(
+                            "reason",
+                            "",
+                        ),
+                }
+            )
 
         return priorities

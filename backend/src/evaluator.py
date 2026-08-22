@@ -12,7 +12,7 @@ from .config import (
 
 from .parsing import (
     extract_skills_dictionary,
-    ALL_SKILLS,
+    get_all_skills,
 )
 
 from .skill_scoring import (
@@ -287,12 +287,12 @@ def evaluate_candidate(
     # Skill Extraction
     jd_skills = extract_skills_dictionary(
         jd_text,
-        ALL_SKILLS
+        get_all_skills()
     )
 
     resume_skills = extract_skills_dictionary(
         resume_text,
-        ALL_SKILLS
+        get_all_skills()
     )
 
     (

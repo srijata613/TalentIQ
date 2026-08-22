@@ -1,8 +1,12 @@
+from __future__ import annotations
+
+import logging
+from typing import Any, Dict, Iterable, List, Set
+
 from .intelligence import (
     detect_behavioral_signals,
     detect_implicit_skills,
 )
-
 from .resume_quality import (
     analyze_section_coverage,
     calculate_resume_completeness,
@@ -10,130 +14,135 @@ from .resume_quality import (
     detect_keyword_stuffing,
 )
 
+logger = logging.getLogger(__name__)
+
+SKILL_MENTION_DIVISOR = 3
+LEADERSHIP_DIVISOR = 5
+OWNERSHIP_DIVISOR = 5
+BEHAVIOR_DIVISOR = 3
+
+DOMAIN_SKILLS = {
+    "backend": {
+        "fastapi",
+        "django",
+        "flask",
+        "spring",
+        "node",
+        "express",
+        "rest",
+        "microservices",
+    },
+    "ai_ml": {
+        "tensorflow",
+        "pytorch",
+        "scikit-learn",
+        "llm",
+        "langchain",
+        "transformers",
+    },
+    "cloud": {
+        "aws",
+        "azure",
+        "gcp",
+        "docker",
+        "kubernetes",
+    },
+    "frontend": {
+        "react",
+        "next.js",
+        "vue",
+        "angular",
+    },
+}
+
+
+def _normalize(values: Iterable[Any]) -> Set[str]:
+    return {
+        str(v).strip().lower()
+        for v in values
+        if v
+    }
+
+
+def _clamp(value: float) -> float:
+    return max(0.0, min(round(value, 2), 1.0))
+
+
 def estimate_skill_proficiency(
-    candidate,
-    resume_text,
-    skills,
-):
+    candidate: Dict[str, Any],
+    resume_text: str,
+    skills: List[str],
+) -> Dict[str, float]:
+
     text_lower = resume_text.lower()
 
-    project_technologies = {
-        technology.lower()
-        for technology in candidate.get(
+    project_technologies = _normalize(
+        candidate.get(
             "parsed_project_technologies",
             [],
         )
-    }
+    )
 
-    proficiency = {}
+    proficiency: Dict[str, float] = {}
 
     for skill in skills:
 
+        skill_name = str(skill).strip()
+
+        if not skill_name:
+            continue
+
         mentions = text_lower.count(
-            skill.lower()
+            skill_name.lower()
         )
 
-        if skill.lower() in project_technologies:
+        if skill_name.lower() in project_technologies:
             mentions += 2
 
-        proficiency[skill] = min(
-            round(mentions / 3, 2),
-            1.0,
+        proficiency[skill_name] = _clamp(
+            mentions / SKILL_MENTION_DIVISOR
         )
 
     return proficiency
 
 
 def estimate_skill_relevance(
-    jd_skills,
-    resume_skills,
-):
+    jd_skills: List[str],
+    resume_skills: List[str],
+) -> float:
 
     if not jd_skills:
         return 0.0
 
-    jd = {
-        skill.lower()
-        for skill in jd_skills
-    }
+    jd = _normalize(jd_skills)
+    resume = _normalize(resume_skills)
 
-    resume = {
-        skill.lower()
-        for skill in resume_skills
-    }
+    overlap = len(jd & resume)
 
-    overlap = len(
-        jd & resume
+    return round(
+        overlap / len(jd),
+        2,
     )
-
-    score = (
-        overlap /
-        max(len(jd), 1)
-    )
-
-    return round(score, 2)
 
 
 def estimate_domain_experience(
-    candidate,
-):
+    candidate: Dict[str, Any],
+) -> Dict[str, float]:
 
-    domains = {
-
-        "backend": {
-            "fastapi",
-            "django",
-            "flask",
-            "spring",
-            "node",
-            "express",
-            "rest",
-            "microservices",
-        },
-
-        "ai_ml": {
-            "tensorflow",
-            "pytorch",
-            "scikit-learn",
-            "llm",
-            "langchain",
-            "transformers",
-        },
-
-        "cloud": {
-            "aws",
-            "azure",
-            "gcp",
-            "docker",
-            "kubernetes",
-        },
-
-        "frontend": {
-            "react",
-            "next.js",
-            "vue",
-            "angular",
-        },
-    }
-
-    skills = {
-        skill.lower()
-        for skill in candidate.get(
+    skills = _normalize(
+        candidate.get(
             "parsed_skills",
             [],
         )
-    }
+    )
 
-    scores = {}
+    scores: Dict[str, float] = {}
 
-    for domain, required in domains.items():
+    for domain, required in DOMAIN_SKILLS.items():
 
         scores[domain] = round(
-            len(
-                skills & required
-            )
-            /
-            len(required),
+            len(skills & required)
+            / len(required),
             2,
         )
 
@@ -141,9 +150,9 @@ def estimate_domain_experience(
 
 
 def estimate_leadership_experience(
-    behavioral_signals,
-    candidate,
-):
+    behavioral_signals: Dict[str, Any],
+    candidate: Dict[str, Any],
+) -> float:
 
     score = behavioral_signals.get(
         "leadership",
@@ -157,16 +166,15 @@ def estimate_leadership_experience(
         )
     )
 
-    return min(
-        round(score / 5, 2),
-        1.0,
+    return _clamp(
+        score / LEADERSHIP_DIVISOR
     )
 
 
 def estimate_ownership_score(
-    behavioral_signals,
-    candidate,
-):
+    behavioral_signals: Dict[str, Any],
+    candidate: Dict[str, Any],
+) -> float:
 
     score = behavioral_signals.get(
         "ownership",
@@ -187,162 +195,144 @@ def estimate_ownership_score(
         )
     )
 
-    return min(
-        round(score / 5, 2),
-        1.0,
+    return _clamp(
+        score / OWNERSHIP_DIVISOR
     )
 
 
 def estimate_initiative_score(
-    behavioral_signals,
-):
-    score = (
+    behavioral_signals: Dict[str, Any],
+) -> float:
+
+    return _clamp(
         behavioral_signals.get(
             "initiative",
-            0
+            0,
         )
-    )
-
-    return min(
-        round(score / 3, 2),
-        1.0
+        / BEHAVIOR_DIVISOR
     )
 
 
 def estimate_collaboration_score(
-    behavioral_signals
-):
-    score = (
+    behavioral_signals: Dict[str, Any],
+) -> float:
+
+    return _clamp(
         behavioral_signals.get(
             "collaboration",
-            0
+            0,
         )
-    )
-
-    return min(
-        round(score / 3, 2),
-        1.0
+        / BEHAVIOR_DIVISOR
     )
 
 
 def build_candidate_intelligence(
-    candidate: dict,
-    jd_skills: list | None = None
-):
-    
-    resume_text = candidate.get(
-        "resume_text",
-        ""
-    )
+    candidate: Dict[str, Any],
+    jd_skills: List[str] | None = None,
+) -> Dict[str, Any]:
 
-    explicit_skills = candidate.get(
-        "parsed_skills",
-        []
-    )
+    if not isinstance(candidate, dict):
+        raise TypeError(
+            "Candidate must be a dictionary."
+        )
 
-    jd_skills = jd_skills or []
+    try:
 
-    behavioral = candidate.get(
-        "behavioral_signals",
-        {}
-    )
-    
-    if not behavioral:
-        behavioral = detect_behavioral_signals(
-            candidate.get(
-                "resume_text",
-                ""
+        resume_text = candidate.get(
+            "resume_text",
+            "",
+        )
+
+        explicit_skills = candidate.get(
+            "parsed_skills",
+            [],
+        )
+
+        jd_skills = jd_skills or []
+
+        behavioral = candidate.get(
+            "behavioral_signals",
+            {}
+        )
+
+        if not behavioral:
+
+            behavioral = detect_behavioral_signals(
+                resume_text
+            )
+
+        inferred_skills = (
+            detect_implicit_skills(
+                explicit_skills
             )
         )
 
-    inferred_skills = detect_implicit_skills(
-            explicit_skills 
-    )
-    
-    
-    coverage = (
-        analyze_section_coverage(
-            candidate
+        coverage = (
+            analyze_section_coverage(
+                candidate
+            )
         )
-    )
-    
-    stuffing = (
-        detect_keyword_stuffing(
-            resume_text
+
+        stuffing = (
+            detect_keyword_stuffing(
+                resume_text
+            )
         )
-    )
-    
-    completeness = (
-        calculate_resume_completeness(
-            coverage
+
+        completeness = (
+            calculate_resume_completeness(
+                coverage
+            )
         )
-    )
-    
-    quality_score = (
-        calculate_resume_quality_score(
-            candidate,
-            completeness,
-            stuffing
+
+        quality_score = (
+            calculate_resume_quality_score(
+                candidate,
+                completeness,
+                stuffing,
+            )
         )
-    )
 
-    result = {
-
-        "explicit_skills":
-            explicit_skills,
-
-        "inferred_skills":
-            inferred_skills,
-
-        "behavioral_signals":
-            behavioral,
-
-        "skill_proficiency":
-            estimate_skill_proficiency(
+        return {
+            "explicit_skills": explicit_skills,
+            "inferred_skills": inferred_skills,
+            "behavioral_signals": behavioral,
+            "skill_proficiency": estimate_skill_proficiency(
                 candidate,
                 resume_text,
-                explicit_skills
+                explicit_skills,
             ),
-
-        "skill_relevance":
-            estimate_skill_relevance(
+            "skill_relevance": estimate_skill_relevance(
                 jd_skills,
-                explicit_skills
+                explicit_skills,
             ),
-
-        "domain_experience":
-            estimate_domain_experience(
+            "domain_experience": estimate_domain_experience(
                 candidate
             ),
-
-        "leadership_experience":
-            estimate_leadership_experience(
-                behavioral,
-                candidate
-            ),
-
-        "ownership_score":
-            estimate_ownership_score(
+            "leadership_experience": estimate_leadership_experience(
                 behavioral,
                 candidate,
             ),
-
-        "initiative_score":
-            estimate_initiative_score(
-                behavioral
+            "ownership_score": estimate_ownership_score(
+                behavioral,
+                candidate,
             ),
-
-        "collaboration_score":
-            estimate_collaboration_score(
-                behavioral
+            "initiative_score": estimate_initiative_score(
+                behavioral,
             ),
-            
-        "resume_quality": {
-            "section_coverage": coverage,
-            "keyword_stuffing": stuffing,
-            "completeness": completeness,
-            "quality_score": quality_score,
+            "collaboration_score": estimate_collaboration_score(
+                behavioral,
+            ),
+            "resume_quality": {
+                "section_coverage": coverage,
+                "keyword_stuffing": stuffing,
+                "completeness": completeness,
+                "quality_score": quality_score,
+            },
         }
-    }
-        
-    return result
+
+    except Exception:
+        logger.exception(
+            "Failed to build candidate intelligence."
+        )
+        raise

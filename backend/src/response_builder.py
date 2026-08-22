@@ -1,91 +1,143 @@
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_LIST: list[Any] = []
+DEFAULT_DICT: dict[str, Any] = {}
 
 
 class ResponseBuilder:
+
     @staticmethod
     def build(
-        candidate: Dict[str, Any],
-        explanation: Dict[str, Any],
-        summary: Dict[str, Any],
-        insights: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        candidate: dict[str, Any],
+        explanation: dict[str, Any],
+        summary: dict[str, Any],
+        insights: dict[str, Any],
+    ) -> dict[str, Any]:
 
-        return {
+        for name, value in (
+            ("candidate", candidate),
+            ("explanation", explanation),
+            ("summary", summary),
+            ("insights", insights),
+        ):
 
-            "candidate": {
+            if not isinstance(value, dict):
+                raise TypeError(
+                    f"{name} must be a dictionary."
+                )
 
-                "name":
-                    candidate.get(
-                        "parsed_name"
-                    ),
+        try:
 
-                "email":
-                    candidate.get(
-                        "parsed_email"
-                    ),
+            score_breakdown = explanation.get(
+                "score_breakdown",
+                DEFAULT_DICT,
+            )
 
-                "phone":
-                    candidate.get(
-                        "parsed_phone"
-                    ),
+            recommendation = explanation.get(
+                "hiring_recommendation",
+                DEFAULT_DICT,
+            )
 
-                "location":
-                    candidate.get(
-                        "parsed_location"
-                    ),
+            confidence = explanation.get(
+                "confidence",
+                DEFAULT_DICT,
+            )
 
-                "experience_years":
-                    candidate.get(
-                        "parsed_experience_years"
-                    ),
+            return {
 
-                "skills":
-                    candidate.get(
-                        "parsed_skills",
-                        [],
-                    ),
-            },
+                "candidate": {
 
-            "summary":
-                summary,
+                    "name":
+                        candidate.get(
+                            "parsed_name",
+                        ),
 
-            "insights":
-                insights,
+                    "email":
+                        candidate.get(
+                            "parsed_email",
+                        ),
 
-            "explanation":
-                explanation,
+                    "phone":
+                        candidate.get(
+                            "parsed_phone",
+                        ),
 
-            "match": {
+                    "location":
+                        candidate.get(
+                            "parsed_location",
+                        ),
 
-                "overall_score":
-                    explanation.get(
-                        "score_breakdown",
-                        {},
-                    ).get(
-                        "overall",
-                        0,
-                    ),
+                    "experience_years":
+                        candidate.get(
+                            "parsed_experience_years",
+                        ),
 
-                "recommendation":
-                    explanation.get(
-                        "hiring_recommendation",
-                        {},
-                    ),
+                    "skills":
+                        candidate.get(
+                            "parsed_skills",
+                            DEFAULT_LIST,
+                        ),
+                },
 
-                "confidence":
-                    explanation.get(
-                        "confidence",
-                        {},
-                    ),
-            },
-        }
+                "summary":
+                    summary,
+
+                "insights":
+                    insights,
+
+                "explanation":
+                    explanation,
+
+                "match": {
+
+                    "overall_score":
+                        score_breakdown.get(
+                            "overall",
+                            0.0,
+                        ),
+
+                    "recommendation":
+                        recommendation,
+
+                    "confidence":
+                        confidence,
+                },
+            }
+
+        except Exception:
+
+            logger.exception(
+                "Failed to build response payload."
+            )
+
+            raise
 
     @staticmethod
     def success(
         intent: str,
-        execution_plan: List[str],
-        data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        execution_plan: list[str],
+        data: dict[str, Any],
+    ) -> dict[str, Any]:
+
+        if not isinstance(intent, str):
+            raise TypeError(
+                "intent must be a string."
+            )
+
+        if not isinstance(execution_plan, list):
+            raise TypeError(
+                "execution_plan must be a list."
+            )
+
+        if not isinstance(data, dict):
+            raise TypeError(
+                "data must be a dictionary."
+            )
 
         return {
 
@@ -104,8 +156,13 @@ class ResponseBuilder:
     @staticmethod
     def error(
         message: str,
-        execution_plan: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        execution_plan: list[str] | None = None,
+    ) -> dict[str, Any]:
+
+        if not isinstance(message, str):
+            raise TypeError(
+                "message must be a string."
+            )
 
         return {
 

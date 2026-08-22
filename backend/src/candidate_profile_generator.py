@@ -1,60 +1,59 @@
 from __future__ import annotations
 
-from re import match
-from typing import Dict, List
+import logging
+from typing import Any, Dict, List
 
 from src.config import (
-    STRONG_HIRE_THRESHOLD,
-    HIRE_THRESHOLD,
     BORDERLINE_THRESHOLD,
     CONFIDENCE_WEIGHTS,
+    HIRE_THRESHOLD,
+    STRONG_HIRE_THRESHOLD,
 )
 
+logger = logging.getLogger(__name__)
+
+LEADERSHIP_THRESHOLD = 0.30
+GOOD_RESUME_SCORE = 70
+
+
 class CandidateProfileGenerator:
+    """
+    Generates the recruiter-facing AI profile for a processed candidate.
+    """
+
     def generate(
         self,
-        candidate: Dict,
-    ) -> Dict:
+        candidate: Dict[str, Any],
+    ) -> Dict[str, Any]:
 
-        return {
+        if not isinstance(candidate, dict):
+            raise TypeError("Candidate must be a dictionary.")
 
-            "executive_summary":
-                self._summary(candidate),
+        try:
 
-            "recommendation":
-                self._recommendation(candidate),
+            return {
+                "executive_summary": self._summary(candidate),
+                "recommendation": self._recommendation(candidate),
+                "strengths": self._strengths(candidate),
+                "concerns": self._concerns(candidate),
+                "interview_focus": self._interview_focus(candidate),
+                "career_fit": self._career_fit(candidate),
+                "confidence": self._confidence(candidate),
+                "evidence": self._evidence(candidate),
+                "red_flags": self._red_flags(candidate),
+                "interview_strategy": self._interview_strategy(candidate),
+                "next_actions": self._next_actions(candidate),
+            }
 
-            "strengths":
-                self._strengths(candidate),
-
-            "concerns":
-                self._concerns(candidate),
-
-            "interview_focus":
-                self._interview_focus(candidate),
-
-            "career_fit":
-                self._career_fit(candidate),
-
-            "confidence":
-                self._confidence(candidate),
-                
-            "evidence":
-                self._evidence(candidate),
-            
-            "red_flags":
-                self._red_flags(candidate),
-            
-            "interview_strategy":
-                self._interview_strategy(candidate),
-            
-            "next_actions":
-                self._next_actions(candidate)
-        }
+        except Exception:
+            logger.exception(
+                "Failed generating AI candidate profile."
+            )
+            raise
 
     def _summary(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> str:
 
         years = candidate.get(
@@ -68,21 +67,20 @@ class CandidateProfileGenerator:
         )[:3]
 
         risk = (
-            candidate
-            .get(
+            candidate.get(
                 "risk_assessment",
                 {},
-            )
-            .get(
+            ).get(
                 "risk_level",
                 "Unknown",
             )
         )
 
-        if skills:
-            skill_text = ", ".join(skills)
-        else:
-            skill_text = "various technologies"
+        skill_text = (
+            ", ".join(skills)
+            if skills
+            else "various technologies"
+        )
 
         return (
             f"Candidate has approximately "
@@ -93,138 +91,138 @@ class CandidateProfileGenerator:
 
     def _recommendation(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> str:
 
-        match = candidate.get(
+        candidate_match = candidate.get(
             "candidate_match"
         )
-        
-        if match is None:
+
+        if candidate_match is None:
             return "Unknown"
-        
-        score = match.overall_score
-        
+
+        score = getattr(
+            candidate_match,
+            "overall_score",
+            0,
+        )
+
         if score >= STRONG_HIRE_THRESHOLD:
             return "Strong Hire"
-        
+
         if score >= HIRE_THRESHOLD:
             return "Hire"
-        
+
         if score >= BORDERLINE_THRESHOLD:
             return "Borderline"
-        
+
         return "Do Not Proceed"
 
     def _strengths(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> List[str]:
 
-        strengths = []
-        
-        match = candidate.get(
+        strengths: List[str] = []
+
+        candidate_match = candidate.get(
             "candidate_match"
         )
 
         if (
-
-            match
-            and
-            match.skill_match.score >= 80
+            candidate_match
+            and getattr(
+                candidate_match.skill_match,
+                "score",
+                0,
+            ) >= 80
         ):
-
             strengths.append(
                 "Excellent Skill Alignment"
             )
 
-            if candidate.get(
-                "parsed_skills"
-            ):
-                strengths.append(
-                    "Strong Technical Stack"
-                )
-
-            if (
-                candidate.get(
-                    "leadership_experience",
-                    0,
-                )
-                >= 0.3
-            ):
-                strengths.append(
-                    "Leadership Indicators"
-                )
-
-            if (
-                candidate.get(
-                    "risk_assessment",
-                    {},
-                ).get(
-                    "risk_level"
-                )
-                == "Low"
-            ):
-                strengths.append(
-                    "Low Hiring Risk"
-                )
-
-            if (
-                candidate.get(
-                    "resume_quality",
-                    {},
-                ).get(
-                    "quality_score",
-                    0,
-                )
-                > 70
-            ):
-                strengths.append(
-                    "Well Structured Resume"
-                )
-
-        return strengths
-
-    def _concerns(
-        self,
-        candidate: Dict,
-    ) -> List[str]:
-
-        concerns = []
-
-        match = candidate.get(
-            "candidate_match"
-        )
-        
-        missing = []
-        
-        if match:
-            
-            missing = (
-                match
-                .skill_match
-                .missing
-            )
-
-        if missing:
-
-            concerns.append(
-                "Missing key skills: "
-                + ", ".join(missing[:3])
+        if candidate.get("parsed_skills"):
+            strengths.append(
+                "Strong Technical Stack"
             )
 
         if (
-            candidate
-            .get(
+            candidate.get(
+                "leadership_experience",
+                0,
+            )
+            >= LEADERSHIP_THRESHOLD
+        ):
+            strengths.append(
+                "Leadership Indicators"
+            )
+
+        if (
+            candidate.get(
                 "risk_assessment",
                 {},
+            ).get(
+                "risk_level"
             )
-            .get(
+            == "Low"
+        ):
+            strengths.append(
+                "Low Hiring Risk"
+            )
+
+        if (
+            candidate.get(
+                "resume_quality",
+                {},
+            ).get(
+                "quality_score",
+                0,
+            )
+            >= GOOD_RESUME_SCORE
+        ):
+            strengths.append(
+                "Well Structured Resume"
+            )
+
+        return list(dict.fromkeys(strengths))
+
+    def _concerns(
+        self,
+        candidate: Dict[str, Any],
+    ) -> List[str]:
+
+        concerns: List[str] = []
+
+        candidate_match = candidate.get(
+            "candidate_match"
+        )
+
+        if candidate_match:
+
+            missing = getattr(
+                candidate_match.skill_match,
+                "missing",
+                [],
+            )
+
+            if missing:
+
+                concerns.append(
+                    "Missing key skills: "
+                    + ", ".join(
+                        missing[:3]
+                    )
+                )
+
+        if (
+            candidate.get(
+                "risk_assessment",
+                {},
+            ).get(
                 "risk_level"
             )
             == "High"
         ):
-
             concerns.append(
                 "High hiring risk"
             )
@@ -233,111 +231,132 @@ class CandidateProfileGenerator:
 
     def _interview_focus(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> List[str]:
 
-        focus = []
+        focus: List[str] = []
 
-        match = candidate.get(
+        candidate_match = candidate.get(
             "candidate_match"
         )
-        
-        missing = []
-        
-        if match:
-            
-            missing = (
-                match
-                .skill_match
-                .missing
-            )
 
-        focus.extend(
-            missing[:5]
-        )
+        if candidate_match:
+
+            focus.extend(
+                getattr(
+                    candidate_match.skill_match,
+                    "missing",
+                    [],
+                )[:5]
+            )
 
         if (
             candidate.get(
                 "leadership_experience",
                 0,
             )
-            > 0.3
+            >= LEADERSHIP_THRESHOLD
         ):
             focus.append(
                 "Leadership Experience"
             )
 
-        return focus
+        return list(dict.fromkeys(focus))
 
     def _career_fit(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> List[str]:
 
         return (
-            candidate
-            .get(
+            candidate.get(
                 "recommendations",
-                {}
-            )
-            .get(
+                {},
+            ).get(
                 "career_paths",
-                []
+                [],
             )
         )
 
     def _confidence(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> int:
 
-        match = candidate.get(
+        candidate_match = candidate.get(
             "candidate_match"
         )
 
-        if not match:
+        if not candidate_match:
             return 0
 
         quality = (
-            candidate
-            .get(
+            candidate.get(
                 "resume_quality",
                 {},
-            )
-            .get(
+            ).get(
                 "quality_score",
-                70,
+                GOOD_RESUME_SCORE,
             )
         )
 
         risk = (
-            candidate
-            .get(
+            candidate.get(
                 "risk_assessment",
                 {},
-            )
-            .get(
+            ).get(
                 "risk_score",
                 0,
             )
         )
 
+        weights = (
+            CONFIDENCE_WEIGHTS
+            if isinstance(
+                CONFIDENCE_WEIGHTS,
+                dict,
+            )
+            else {}
+        )
+
         confidence = (
-            match.overall_score * 0.60
-            + quality * 0.20
-            + (100 - risk) * 0.20
+            getattr(
+                candidate_match,
+                "overall_score",
+                0,
+            )
+            * weights.get(
+                "match",
+                0.60,
+            )
+            + quality
+            * weights.get(
+                "resume_quality",
+                0.20,
+            )
+            + (100 - risk)
+            * weights.get(
+                "risk",
+                0.20,
+            )
         )
 
         return round(
-            min(confidence, 100)
+            max(
+                0,
+                min(
+                    confidence,
+                    100,
+                ),
+            )
         )
-    
+
     def _evidence(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> List[str]:
 
-        evidence = []
+        evidence: List[str] = []
 
         if candidate.get("parsed_skills"):
             evidence.append(
@@ -356,7 +375,7 @@ class CandidateProfileGenerator:
                 "leadership_experience",
                 0,
             )
-            >= 0.3
+            >= LEADERSHIP_THRESHOLD
         ):
             evidence.append(
                 "Leadership indicators present"
@@ -375,14 +394,14 @@ class CandidateProfileGenerator:
                 "Low hiring risk"
             )
 
-        return evidence
-    
+        return list(dict.fromkeys(evidence))
+
     def _red_flags(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> List[str]:
 
-        flags = []
+        flags: List[str] = []
 
         risk = candidate.get(
             "risk_assessment",
@@ -396,7 +415,6 @@ class CandidateProfileGenerator:
             )
             > 30
         ):
-        
             flags.append(
                 "Employment gaps detected"
             )
@@ -408,7 +426,6 @@ class CandidateProfileGenerator:
             )
             > 0
         ):
-        
             flags.append(
                 "Resume inconsistency detected"
             )
@@ -420,42 +437,38 @@ class CandidateProfileGenerator:
             )
             > 50
         ):
-        
             flags.append(
                 "Possible skill inflation"
             )
 
         return flags
-    
+
     def _interview_strategy(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> List[str]:
 
-        strategy = []
+        strategy: List[str] = []
 
-        if (
-            candidate.get(
-                "parsed_skills"
-            )
+        if candidate.get(
+            "parsed_skills"
         ):
-        
             strategy.append(
                 "Assess technical depth of core skills."
             )
 
-            if (
-                candidate.get(
-                    "leadership_experience",
-                    0,
-                )
-                >= 0.3
-            ):
-                strategy.append(
-                    "Discuss leadership experiences."
-                )
-
         if (
+            candidate.get(
+                "leadership_experience",
+                0,
+            )
+            >= LEADERSHIP_THRESHOLD
+        ):
+            strategy.append(
+                "Discuss leadership experiences."
+            )
+
+        missing = (
             candidate.get(
                 "recommendations",
                 {},
@@ -466,48 +479,47 @@ class CandidateProfileGenerator:
             )
             .get(
                 "missing_skills",
-                []
+                [],
             )
-        ):
+        )
+
+        if missing:
             strategy.append(
                 "Validate missing technical areas."
             )
 
         return strategy
-    
+
     def _next_actions(
         self,
-        candidate: Dict,
+        candidate: Dict[str, Any],
     ) -> List[str]:
-
-        actions = []
 
         recommendation = self._recommendation(
             candidate
         )
 
-        if recommendation == "Strong Hire":
-
-            actions.append(
+        mapping = {
+            "Strong Hire": [
                 "Proceed to technical interview."
-            )
-
-        elif recommendation == "Hire":
-
-            actions.append(
+            ],
+            "Hire": [
                 "Schedule recruiter screening."
-            )
-
-        elif recommendation == "Borderline":
-
-            actions.append(
+            ],
+            "Borderline": [
                 "Conduct detailed technical assessment."
-            )
-
-        else:
-
-            actions.append(
+            ],
+            "Do Not Proceed": [
                 "Review candidate before proceeding."
-            )
+            ],
+            "Unknown": [
+                "Review candidate manually."
+            ],
+        }
 
-        return actions
+        return mapping.get(
+            recommendation,
+            [
+                "Review candidate manually."
+            ],
+        )

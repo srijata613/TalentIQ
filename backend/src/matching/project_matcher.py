@@ -1,196 +1,242 @@
 from __future__ import annotations
 
+import logging
+import re
+from typing import Any, Dict, Iterable, List, Set
+
 from .models import MatchResult
+
+logger = logging.getLogger(__name__)
+
+MAX_LEADERSHIP_SIGNALS = 5
+
+SEMANTIC_ALIASES: Dict[str, List[str]] = {
+    "leadership": [
+        "led",
+        "lead",
+        "leading",
+        "team lead",
+        "managed",
+        "management",
+        "manager",
+    ],
+    "leadership experience": [
+        "led",
+        "lead",
+        "leading",
+        "team lead",
+        "managed",
+        "management",
+        "manager",
+    ],
+    "mentoring": [
+        "mentor",
+        "mentored",
+        "mentoring",
+        "coached",
+        "trained",
+    ],
+    "mentoring engineers": [
+        "mentor",
+        "mentored",
+        "mentoring",
+        "coached",
+        "trained",
+    ],
+    "rest api": [
+        "rest api",
+        "rest apis",
+        "restful api",
+        "restful apis",
+        "api development",
+        "built rest api",
+        "built rest apis",
+    ],
+    "rest api development": [
+        "rest api",
+        "rest apis",
+        "restful api",
+        "restful apis",
+        "api development",
+        "built rest api",
+        "built rest apis",
+    ],
+    "cloud deployment": [
+        "deploy",
+        "deployed",
+        "deployment",
+        "deployed applications",
+        "deployed services",
+    ],
+}
 
 
 class ProjectMatcher:
-
-    SEMANTIC_ALIASES = {
-
-        "leadership experience": [
-            "led",
-            "lead",
-            "leading",
-            "team lead",
-            "managed",
-            "management",
-            "manager",
-        ],
-
-        "mentoring engineers": [
-            "mentor",
-            "mentored",
-            "mentoring",
-            "coached",
-            "trained",
-        ],
-
-        "rest api development": [
-            "rest api",
-            "rest apis",
-            "restful api",
-            "restful apis",
-            "api development",
-            "built rest api",
-            "built rest apis",
-        ],
-
-        "cloud deployment": [
-            "deploy",
-            "deployed",
-            "deployment",
-            "deployed applications",
-            "deployed services",
-        ],
-        "leadership": [
-            "led",
-            "lead",
-            "leading",
-            "team lead",
-            "managed",
-            "management",
-            "manager",
-        ],
-
-        "mentoring": [
-            "mentor",
-            "mentored",
-            "mentoring",
-            "coached",
-            "trained",
-        ],
-
-        "rest api": [
-            "rest api",
-            "rest apis",
-            "restful api",
-            "restful apis",
-            "api development",
-            "built rest api",
-            "built rest apis",
-        ],
-    }
-
     @staticmethod
     def _normalize(text: str) -> str:
-
         return (
-            text.strip()
+            str(text)
+            .strip()
             .lower()
             .replace("-", " ")
         )
 
+    @classmethod
+    def _normalize_set(
+        cls,
+        values: Iterable[Any],
+    ) -> Set[str]:
+
+        return {
+            cls._normalize(value)
+            for value in values
+            if value
+        }
+
+    @classmethod
+    def _match_alias(
+        cls,
+        required: str,
+        project_text: str,
+    ) -> bool:
+
+        aliases = SEMANTIC_ALIASES.get(
+            required,
+            [required],
+        )
+
+        for alias in aliases:
+
+            pattern = re.compile(
+                rf"\b{re.escape(cls._normalize(alias))}\b"
+            )
+
+            if pattern.search(project_text):
+                return True
+
+        return False
+
     def match(
         self,
-        candidate: dict,
-        job: dict,
+        candidate: Dict[str, Any],
+        job: Dict[str, Any],
     ) -> MatchResult:
+
+        if not isinstance(candidate, dict):
+            raise TypeError(
+                "Candidate must be a dictionary."
+            )
+
+        if not isinstance(job, dict):
+            raise TypeError(
+                "Job must be a dictionary."
+            )
 
         result = MatchResult()
 
-        project_tech = {
-            self._normalize(skill)
-            for skill in candidate.get(
-                "parsed_project_technologies",
-                [],
+        try:
+
+            project_tech = self._normalize_set(
+                candidate.get(
+                    "parsed_project_technologies",
+                    [],
+                )
             )
-            if skill
-        }
 
-        required_skills = {
-            self._normalize(skill)
-            for skill in job.get(
-                "required_skills",
-                [],
+            required_skills = self._normalize_set(
+                job.get(
+                    "required_skills",
+                    [],
+                )
             )
-            if skill
-        }
 
-        if not required_skills:
+            if not required_skills:
 
-            result.score = 100.0
+                result.score = 100.0
+                result.evidence.append(
+                    "No project technology requirements."
+                )
 
-            result.evidence.append(
-                "No project technology requirements."
+                return result
+
+            project_text = self._normalize(
+                " ".join(
+                    candidate.get(
+                        "parsed_projects",
+                        [],
+                    )
+                )
             )
+
+            matched: List[str] = []
+            missing: List[str] = []
+
+            for required in sorted(required_skills):
+
+                matched_flag = (
+                    required in project_tech
+                )
+
+                if not matched_flag:
+                    matched_flag = self._match_alias(
+                        required,
+                        project_text,
+                    )
+
+                if matched_flag:
+
+                    matched.append(required)
+
+                    result.evidence.append(
+                        f"Project experience with {required}"
+                    )
+
+                else:
+
+                    missing.append(required)
+
+                    result.evidence.append(
+                        f"Missing project experience with {required}"
+                    )
+
+            result.matched = matched
+            result.missing = missing
+
+            result.score = round(
+                (
+                    len(matched)
+                    / len(required_skills)
+                )
+                * 100,
+                2,
+            )
+
+            leadership_score = (
+                min(
+                    len(
+                        candidate.get(
+                            "parsed_leadership_signals",
+                            [],
+                        )
+                    )
+                    / MAX_LEADERSHIP_SIGNALS,
+                    1.0,
+                )
+                * 100
+            )
+
+            if leadership_score > 0:
+
+                result.evidence.append(
+                    "Leadership demonstrated in projects."
+                )
 
             return result
 
-        project_text = self._normalize(
-            " ".join(
-                candidate.get(
-                    "parsed_projects",
-                    [],
-                )
-            )
-        )
+        except Exception:
 
-        matched = []
-        missing = []
-
-        for required in required_skills:
-
-            matched_flag = False
-
-            if required in project_tech:
-
-                matched_flag = True
-
-            else:
-
-                aliases = self.SEMANTIC_ALIASES.get(
-                    required,
-                    [required],
-                )
-
-                matched_flag = any(
-                    self._normalize(alias) in project_text
-                    for alias in aliases
-                )
-
-            if matched_flag:
-
-                matched.append(required)
-
-                result.evidence.append(
-                    f"Project experience with {required}"
-                )
-
-            else:
-
-                missing.append(required)
-
-                result.evidence.append(
-                    f"Missing project experience with {required}"
-                )
-
-        result.matched = sorted(set(matched))
-
-        result.missing = sorted(set(missing))
-
-        result.score = round(
-            (
-                len(result.matched)
-                / len(required_skills)
-            )
-            * 100,
-            2,
-        )
-
-        leadership = min(
-            len(
-                candidate.get(
-                    "parsed_leadership_signals",
-                    [],
-                )
-            ) / 5,
-            1.0,
-        ) * 100
-
-        if leadership >= 0.3:
-
-            result.evidence.append(
-                "Leadership demonstrated in projects."
+            logger.exception(
+                "Project matching failed."
             )
 
-        return result
+            raise

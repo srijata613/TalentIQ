@@ -1,127 +1,187 @@
-from typing import Dict, List
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+MAX_SUMMARY_ITEMS = 5
 
 
 class RecruiterSummary:
+
     def build(
         self,
-        explanation: Dict,
-    ) -> Dict:
+        explanation: dict[str, Any],
+    ) -> dict[str, Any]:
 
-        recommendation = explanation.get(
-            "hiring_recommendation",
-            {}
-        )
-
-        confidence = explanation.get(
-            "confidence",
-            {}
-        )
-
-        strengths = self._flatten_items(
-            explanation.get(
-                "strengths",
-                []
+        if not isinstance(explanation, dict):
+            raise TypeError(
+                "explanation must be a dictionary."
             )
-        )
 
-        gaps = self._flatten_items(
-            explanation.get(
-                "gaps",
-                []
+        try:
+
+            recommendation = explanation.get(
+                "hiring_recommendation",
+                {},
             )
-        )
 
-        interview_topics = []
+            confidence = explanation.get(
+                "confidence",
+                {},
+            )
 
-        for item in explanation.get(
-            "interview_focus",
-            []
-        ):
+            score_breakdown = explanation.get(
+                "score_breakdown",
+                {},
+            )
 
-            interview_topics.extend(
-                item.get(
-                    "topics",
-                    []
+            strengths = self._flatten_items(
+                explanation.get(
+                    "strengths",
+                    [],
                 )
             )
 
-        return {
-
-            "headline":
-                recommendation.get(
-                    "decision",
-                    "Unknown"
-                ),
-
-            "executive_summary":
+            gaps = self._flatten_items(
                 explanation.get(
-                    "executive_summary",
-                    ""
-                ),
+                    "gaps",
+                    [],
+                )
+            )
 
-            "overall_score":
-                explanation.get(
-                    "score_breakdown",
-                    {}
-                ).get(
-                    "overall",
-                    0,
-                ),
+            interview_topics = (
+                self._flatten_topics(
+                    explanation.get(
+                        "interview_focus",
+                        [],
+                    )
+                )
+            )
 
-            "confidence":
-                confidence.get(
-                    "level",
-                    "Unknown",
-                ),
+            return {
 
-            "confidence_score":
-                confidence.get(
-                    "score",
-                    0,
-                ),
+                "headline":
+                    recommendation.get(
+                        "decision",
+                        "Unknown",
+                    ),
 
-            "top_strengths":
-                strengths[:5],
+                "executive_summary":
+                    explanation.get(
+                        "executive_summary",
+                        "",
+                    ),
 
-            "top_gaps":
-                gaps[:5],
+                "overall_score":
+                    score_breakdown.get(
+                        "overall",
+                        0,
+                    ),
 
-            "recommended_interview_focus":
-                interview_topics[:5],
+                "confidence":
+                    confidence.get(
+                        "level",
+                        "Unknown",
+                    ),
 
-            "priority":
-                recommendation.get(
-                    "priority",
-                    "Medium",
-                ),
+                "confidence_score":
+                    confidence.get(
+                        "score",
+                        0,
+                    ),
 
-            "decision":
-                recommendation.get(
-                    "decision",
-                    "Unknown",
-                ),
-        }
+                "top_strengths":
+                    strengths[
+                        :MAX_SUMMARY_ITEMS
+                    ],
+
+                "top_gaps":
+                    gaps[
+                        :MAX_SUMMARY_ITEMS
+                    ],
+
+                "recommended_interview_focus":
+                    interview_topics[
+                        :MAX_SUMMARY_ITEMS
+                    ],
+
+                "priority":
+                    recommendation.get(
+                        "priority",
+                        "Medium",
+                    ),
+
+                "decision":
+                    recommendation.get(
+                        "decision",
+                        "Unknown",
+                    ),
+            }
+
+        except Exception:
+
+            logger.exception(
+                "Failed to build recruiter summary."
+            )
+
+            raise
 
     @staticmethod
     def _flatten_items(
-        grouped_items: List[Dict],
-    ) -> List[str]:
+        grouped_items: list[dict[str, Any]],
+    ) -> list[str]:
 
-        items = []
-
-        seen = set()
+        items: list[str] = []
+        seen: set[str] = set()
 
         for group in grouped_items:
+
+            if not isinstance(group, dict):
+                continue
 
             for value in group.get(
                 "items",
                 [],
             ):
 
-                if value not in seen:
+                if (
+                    not isinstance(value, str)
+                    or value in seen
+                ):
+                    continue
 
-                    seen.add(value)
-
-                    items.append(value)
+                seen.add(value)
+                items.append(value)
 
         return items
+
+    @staticmethod
+    def _flatten_topics(
+        grouped_topics: list[dict[str, Any]],
+    ) -> list[str]:
+
+        topics: list[str] = []
+        seen: set[str] = set()
+
+        for group in grouped_topics:
+
+            if not isinstance(group, dict):
+                continue
+
+            for topic in group.get(
+                "topics",
+                [],
+            ):
+
+                if (
+                    not isinstance(topic, str)
+                    or topic in seen
+                ):
+                    continue
+
+                seen.add(topic)
+                topics.append(topic)
+
+        return topics
