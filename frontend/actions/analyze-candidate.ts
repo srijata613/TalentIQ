@@ -1,5 +1,6 @@
 "use server";
 
+import { API_BASE_URL } from "@/lib/api-config";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function analyzeCandidate(
@@ -38,7 +39,7 @@ export async function analyzeCandidate(
   }
 
   const response = await fetch(
-    "http://127.0.0.1:8000/parse-resume-url",
+    `${API_BASE_URL}/parse-resume-url`,
     {
       method: "POST",
       headers: {

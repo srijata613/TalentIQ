@@ -1,277 +1,177 @@
 import { currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import type { Metadata } from "next";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { syncUser } from "@/actions/sync-user";
 import CreateOrganizationForm from "@/components/create-organization-form";
-import Link from "next/link";
-import type { Metadata } from "next";
+import Icon from "@/components/icon";
 
-export const metadata: Metadata = { title: "Dashboard" };
+export const metadata: Metadata = { title: "Overview" };
 
-function BriefcaseIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2">
-      <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
-      <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
-    </svg>
-  );
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
-function UsersIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2">
-      <path d="M17 20h5v-2a4 4 0 00-5.196-3.773M9 20H4v-2a4 4 0 015.196-3.773M15 7a4 4 0 11-8 0 4 4 0 018 0zm6 3a3 3 0 11-6 0 3 3 0 016 0zM3 10a3 3 0 116 0 3 3 0 01-6 0z" />
-    </svg>
-  );
+function humanizeStatus(value?: string | null) {
+  return (value || "draft").replace(/[_-]/g, " ").toLowerCase();
 }
 
-function BuildingIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2">
-      <rect x="4" y="2" width="16" height="20" rx="2" />
-      <path d="M9 22v-4h6v4" />
-      <path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01" />
-    </svg>
-  );
-}
-
-function DocumentIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-    </svg>
-  );
-}
-
-function TargetIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2">
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-    </svg>
-  );
-}
-
-function SparklesIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2">
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
-  );
-}
-
-function RankIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2">
-      <path d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
-    </svg>
-  );
-}
-
-function UploadIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2">
-      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2">
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-async function DashboardStats({ orgId }: { orgId: string }) {
-  const supabase = createSupabaseServerClient();
-
-  const [{ count: jobCount }, { count: candidateCount }] = await Promise.all([
-    supabase
-      .from("jobs")
-      .select("*", { count: "exact", head: true })
-      .eq("organization_id", orgId),
-    supabase
-      .from("candidates")
-      .select("*", { count: "exact", head: true })
-      .eq("organization_id", orgId),
-  ]);
-
-  return { jobCount: jobCount ?? 0, candidateCount: candidateCount ?? 0 };
+function initials(value?: string | null) {
+  const words = (value || "Candidate").trim().split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "C";
 }
 
 export default async function DashboardPage() {
   const clerkUser = await currentUser();
-  await syncUser();
+  if (!clerkUser) redirect("/sign-in");
 
+  await syncUser();
   const supabase = createSupabaseServerClient();
 
   const { data: user } = await supabase
     .from("users")
-    .select("*")
-    .eq("clerk_user_id", clerkUser?.id)
+    .select("id")
+    .eq("clerk_user_id", clerkUser.id)
     .maybeSingle();
 
   const { data: membership } = await supabase
     .from("memberships")
-    .select("*, organizations (*)")
+    .select("organization_id, role, organizations ( id, name )")
     .eq("user_id", user?.id)
     .maybeSingle();
 
   if (!membership) {
     return (
-      <div style={{ padding: "40px 32px" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: 8, color: "#FFFFFF" }}>
-          Welcome to TalentIQ
-        </h1>
-        <p style={{ color: "#A1A1AA", marginBottom: 32 }}>
-          Set up your organization to get started.
-        </p>
-        <CreateOrganizationForm />
+      <div className="onboarding-page">
+        <div className="onboarding-mark"><Icon name="building" size={22} /></div>
+        <p className="eyebrow">One quick setup</p>
+        <h1 className="page-title">Welcome to TalentIQ</h1>
+        <p className="page-subtitle">Create your organization workspace to start organizing roles, evaluating candidates, and using talent intelligence.</p>
+        <div className="glass page-form-panel"><CreateOrganizationForm /></div>
       </div>
     );
   }
 
-  const stats = await DashboardStats({ orgId: membership.organization_id });
-  const org = membership.organizations;
-  const firstName = clerkUser?.firstName ?? "there";
+  const orgId = membership.organization_id;
+  const [{ count: jobCount }, { count: candidateCount }, { count: parsedCount }, { data: recentJobs }, { data: recentCandidates }] = await Promise.all([
+    supabase.from("jobs").select("id", { count: "exact", head: true }).eq("organization_id", orgId),
+    supabase.from("candidates").select("id", { count: "exact", head: true }).eq("organization_id", orgId),
+    supabase.from("candidates").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "parsed"),
+    supabase.from("jobs").select("id, title, status, created_at").eq("organization_id", orgId).order("created_at", { ascending: false }).limit(5),
+    supabase.from("candidates").select("id, parsed_name, parsed_email, parsed_skills, status, created_at").eq("organization_id", orgId).order("created_at", { ascending: false }).limit(5),
+  ]);
+
+  const jobsTotal = jobCount ?? 0;
+  const candidatesTotal = candidateCount ?? 0;
+  const parsedTotal = parsedCount ?? 0;
+  const pendingTotal = Math.max(0, candidatesTotal - parsedTotal);
+  const organization = Array.isArray(membership.organizations) ? membership.organizations[0] : membership.organizations;
+  const firstName = clerkUser.firstName || clerkUser.username || "there";
 
   return (
-    <div style={{ padding: "40px 32px" }}>
-      {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <p style={{ color: "#A1A1AA", fontSize: "0.875rem", marginBottom: 4 }}>
-          Welcome back, {firstName}
-        </p>
-        <h1 style={{ fontSize: "2rem", fontWeight: 700, margin: 0, color: "#FFFFFF" }}>
-          {org?.name ?? "Dashboard"}
-        </h1>
-        <span
-          className="badge badge-brand"
-          style={{ marginTop: 8, display: "inline-flex" }}
-        >
-          {membership.role}
-        </span>
-      </div>
-
-      {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 32 }}>
-        <StatCard
-          title="Active Jobs"
-          value={stats.jobCount}
-          icon={<BriefcaseIcon />}
-          href="/jobs"
-        />
-        <StatCard
-          title="Candidates"
-          value={stats.candidateCount}
-          icon={<UsersIcon />}
-          href="/candidates"
-        />
-        <StatCard
-          title="Organization"
-          value={org?.name ?? "—"}
-          icon={<BuildingIcon />}
-          href="/dashboard"
-          isText
-        />
-      </div>
-
-      {/* Quick Actions */}
-      <div style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 16, color: "#FFFFFF" }}>Quick Actions</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-          {[
-            { label: "Analyze a Resume", href: "/analyze/resume", icon: <DocumentIcon />, desc: "Parse skills, experience & credentials" },
-            { label: "Analyze a Job Description", href: "/analyze/job", icon: <TargetIcon />, desc: "Extract requirements & skills" },
-            { label: "Match Candidate", href: "/match", icon: <SparklesIcon />, desc: "Score a resume against a JD" },
-            { label: "Rank Candidates", href: "/rank", icon: <RankIcon />, desc: "Batch rank multiple resumes" },
-            { label: "Upload Resume", href: "/candidates/upload", icon: <UploadIcon />, desc: "Add a candidate to your pool" },
-            { label: "New Job", href: "/jobs/new", icon: <PlusIcon />, desc: "Create a job description" },
-          ].map((action) => (
-            <Link
-              key={action.href}
-              href={action.href}
-              className="glass"
-              style={{
-                padding: "18px 16px",
-                textDecoration: "none",
-                display: "block",
-                transition: "background 0.15s ease",
-              }}
-            >
-              <div style={{ marginBottom: 10 }}>{action.icon}</div>
-              <div style={{ fontWeight: 600, fontSize: "0.9375rem", marginBottom: 4, color: "#FFFFFF" }}>
-                {action.label}
-              </div>
-              <div style={{ fontSize: "0.8125rem", color: "#A1A1AA" }}>
-                {action.desc}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  icon,
-  href,
-  isText = false,
-}: {
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  href: string;
-  isText?: boolean;
-}) {
-  return (
-    <Link href={href} style={{ textDecoration: "none" }}>
-      <div
-        className="glass"
-        style={{
-          padding: "20px",
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 16,
-        }}
-      >
-        <div
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 8,
-            background: "#18181b",
-            border: "1px solid #27272a",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          {icon}
-        </div>
+    <div className="dashboard-page">
+      <section className="dashboard-welcome">
         <div>
-          <div style={{ fontSize: "0.8125rem", color: "#A1A1AA", marginBottom: 4 }}>
-            {title}
+          <p className="eyebrow">Your hiring workspace</p>
+          <h1 className="welcome-title">Welcome back, <span className="welcome-accent">{firstName}</span></h1>
+          <p className="welcome-copy">A clear view of your roles and talent pool, all in one place.</p>
+          <div className="org-chip"><Icon name="building" size={13} /><span>{organization?.name || "Your organization"}</span><span aria-hidden="true">·</span><span>{humanizeStatus(membership.role)}</span></div>
+        </div>
+        <Link href="/jobs/new" className="btn btn-primary"><Icon name="plus" size={16} /> Create a job</Link>
+      </section>
+
+      <section className="dashboard-stats" aria-label="Workspace statistics">
+        <Link href="/jobs" className="stat-card">
+          <span className="stat-icon"><Icon name="briefcase" size={18} /></span>
+          <div className="stat-meta"><span className="stat-label">Job descriptions</span><span className="stat-value">{jobsTotal}</span><span className="stat-footnote">Roles in your workspace</span></div>
+        </Link>
+        <Link href="/candidates" className="stat-card">
+          <span className="stat-icon"><Icon name="users" size={18} /></span>
+          <div className="stat-meta"><span className="stat-label">Talent pool</span><span className="stat-value">{candidatesTotal}</span><span className="stat-footnote">Candidate profiles</span></div>
+        </Link>
+        <Link href="/candidates" className="stat-card">
+          <span className="stat-icon"><Icon name="file-check" size={18} /></span>
+          <div className="stat-meta"><span className="stat-label">Parsed resumes</span><span className="stat-value">{parsedTotal}</span><span className="stat-footnote">Profiles with extracted data</span></div>
+        </Link>
+        <Link href="/candidates" className="stat-card">
+          <span className="stat-icon"><Icon name="clock" size={18} /></span>
+          <div className="stat-meta"><span className="stat-label">Not parsed yet</span><span className="stat-value">{pendingTotal}</span><span className="stat-footnote">Profiles without parsed data</span></div>
+        </Link>
+      </section>
+
+      <section className="dashboard-main-grid">
+        <div className="dashboard-panel">
+          <div className="dashboard-panel-header">
+            <div><h2 className="section-heading">Recent jobs</h2><p className="section-description">Pick up where your hiring work left off.</p></div>
+            <Link href="/jobs" className="text-link">View all <Icon name="arrow-right" size={14} /></Link>
           </div>
-          <div
-            style={{
-              fontSize: isText ? "1.125rem" : "1.75rem",
-              fontWeight: 700,
-              color: "#FFFFFF",
-              lineHeight: 1.2,
-            }}
-          >
-            {value}
+          {recentJobs && recentJobs.length > 0 ? (
+            <div className="dashboard-table-wrap">
+              <table className="data-table">
+                <thead><tr><th>Job title</th><th>Status</th><th>Created</th><th aria-label="Actions" /></tr></thead>
+                <tbody>
+                  {recentJobs.map((job) => {
+                    const status = humanizeStatus(job.status);
+                    return (
+                      <tr key={job.id}>
+                        <td><Link href={`/jobs/${job.id}`} className="table-primary-link">{job.title || "Untitled role"}</Link><span className="table-meta">Job description</span></td>
+                        <td><span className={`inline-status status-${status.replace(/\s+/g, "-")}`}>{status}</span></td>
+                        <td className="table-muted">{formatDate(job.created_at)}</td>
+                        <td><Link href={`/jobs/${job.id}`} className="text-link" aria-label={`Open ${job.title || "job"}`}><Icon name="chevron-right" size={15} /></Link></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty-inline"><strong>No jobs yet</strong>Create your first role to start organizing requirements and matching candidates.<br /><Link href="/jobs/new" className="text-link">Create your first job <Icon name="arrow-right" size={13} /></Link></div>
+          )}
+        </div>
+
+        <div className="dashboard-panel">
+          <div className="dashboard-panel-header">
+            <div><h2 className="section-heading">Recently added candidates</h2><p className="section-description">The latest profiles in your talent pool.</p></div>
+            <Link href="/candidates" className="text-link">View all <Icon name="arrow-right" size={14} /></Link>
+          </div>
+          <div className="dashboard-panel-body">
+            {recentCandidates && recentCandidates.length > 0 ? (
+              <div className="candidate-mini-list">
+                {recentCandidates.map((candidate) => {
+                  const name = candidate.parsed_name || "Unnamed candidate";
+                  const skills = Array.isArray(candidate.parsed_skills) ? candidate.parsed_skills.slice(0, 2).join(" · ") : "";
+                  return (
+                    <div className="candidate-mini-row" key={candidate.id}>
+                      <span className="candidate-avatar">{initials(candidate.parsed_name)}</span>
+                      <div className="candidate-mini-copy">
+                        <Link href={`/candidates/${candidate.id}`} className="candidate-mini-name">{name}</Link>
+                        <span className="candidate-mini-meta">{skills || candidate.parsed_email || "Profile details not parsed yet"}</span>
+                      </div>
+                      <span className={`badge ${candidate.status === "parsed" ? "badge-emerald" : "badge-gray"}`}>{humanizeStatus(candidate.status)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-inline"><strong>Your talent pool starts here</strong>Upload resumes to build searchable candidate profiles.<br /><Link href="/candidates/upload" className="text-link">Add candidates <Icon name="arrow-right" size={13} /></Link></div>
+            )}
           </div>
         </div>
-      </div>
-    </Link>
+      </section>
+
+      <section>
+        <div className="section-heading-row"><div><h2 className="section-heading">Jump back in</h2><p className="section-description">Common tasks, without the extra navigation.</p></div></div>
+        <div className="quick-actions-grid">
+          <Link href="/jobs/new" className="quick-action"><span className="quick-action-icon"><Icon name="plus" size={17} /></span><span className="quick-action-copy"><strong>Create a job</strong><span>Set up a role and its requirements</span></span></Link>
+          <Link href="/candidates/upload" className="quick-action"><span className="quick-action-icon"><Icon name="upload" size={17} /></span><span className="quick-action-copy"><strong>Add candidates</strong><span>Upload resumes to your talent pool</span></span></Link>
+          <Link href="/rank" className="quick-action"><span className="quick-action-icon"><Icon name="target" size={17} /></span><span className="quick-action-copy"><strong>Match & rank</strong><span>Review candidate fit for a role</span></span></Link>
+          <Link href="/search" className="quick-action"><span className="quick-action-icon"><Icon name="search" size={17} /></span><span className="quick-action-copy"><strong>Find talent</strong><span>Search candidate profiles</span></span></Link>
+        </div>
+      </section>
+    </div>
   );
 }

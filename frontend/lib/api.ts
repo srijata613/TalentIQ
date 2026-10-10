@@ -4,8 +4,9 @@
  * Configure the base URL via NEXT_PUBLIC_API_URL (defaults to http://localhost:8000).
  */
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+import { API_BASE_URL } from "@/lib/api-config";
+
+const BASE_URL = API_BASE_URL;
 
 export class ApiError extends Error {
   constructor(

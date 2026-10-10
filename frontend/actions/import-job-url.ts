@@ -1,5 +1,6 @@
 "use server";
 
+import { API_BASE_URL } from "@/lib/api-config";
 import { currentUser } from "@clerk/nextjs/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { analyzeJob } from "@/actions/analyze-job";
@@ -15,7 +16,7 @@ export async function importJobUrl(
   }
 
   const response = await fetch(
-    "http://127.0.0.1:8000/jobs/import-url",
+    `${API_BASE_URL}/jobs/import-url`,
     {
       method: "POST",
       headers: {

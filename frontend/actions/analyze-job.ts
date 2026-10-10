@@ -1,5 +1,6 @@
 "use server";
 
+import { API_BASE_URL } from "@/lib/api-config";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function analyzeJob(
@@ -7,7 +8,7 @@ export async function analyzeJob(
   content: string
 ) {
   const response = await fetch(
-    "http://127.0.0.1:8000/jobs/analyze",
+    `${API_BASE_URL}/jobs/analyze`,
     {
       method: "POST",
       headers: {
