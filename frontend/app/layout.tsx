@@ -1,21 +1,15 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "TalentIQ",
-  description: "AI Talent Intelligence Platform",
+  title: {
+    default: "TalentIQ – AI Talent Intelligence Platform",
+    template: "%s | TalentIQ",
+  },
+  description:
+    "Semantic resume analysis, AI-powered candidate matching, and intelligent recruitment workflows.",
+  keywords: ["recruitment", "AI", "resume analyzer", "job matching", "talent intelligence"],
 };
 
 export default function RootLayout({
@@ -26,11 +20,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          {children}
-        </body>
+        <body>{children}</body>
       </html>
     </ClerkProvider>
   );

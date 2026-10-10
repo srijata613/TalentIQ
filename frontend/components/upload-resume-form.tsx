@@ -17,14 +17,10 @@ export default function UploadResumeForm() {
       const fileName = `${Date.now()}-${file.name}`;
 
       const {
-        data: uploadData,
         error: uploadError,
       } = await supabaseBrowser.storage
         .from("resumes")
         .upload(fileName, file);
-
-      console.log("UPLOAD RESULT:", uploadData);
-      console.log("UPLOAD ERROR:", uploadError);
 
       if (uploadError) {
         throw uploadError;
@@ -36,9 +32,6 @@ export default function UploadResumeForm() {
       } = await supabaseBrowser.storage
         .from("resumes")
         .createSignedUrl(fileName, 60);
-
-      console.log("SIGNED URL:", signedUrlData);
-      console.log("SIGNED URL ERROR:", signedUrlError);
 
       if (signedUrlError || !signedUrlData?.signedUrl) {
         throw new Error(
@@ -52,8 +45,7 @@ export default function UploadResumeForm() {
         fileName
       );
 
-      window.location.href =
-        `/candidates/${candidate.id}`;
+      window.location.href = `/candidates/${candidate.id}`;
 
     } catch (err) {
       console.error("UPLOAD ERROR:", err);
@@ -69,26 +61,29 @@ export default function UploadResumeForm() {
   }
 
   return (
-    <div className="space-y-4">
-      <input
-        type="file"
-        accept=".pdf"
-        onChange={(e) =>
-          setFile(
-            e.target.files?.[0] ?? null
-          )
-        }
-      />
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div>
+        <label className="form-label">Select Candidate Resume PDF</label>
+        <input
+          type="file"
+          accept=".pdf"
+          className="form-input"
+          style={{ cursor: "pointer" }}
+          onChange={(e) =>
+            setFile(e.target.files?.[0] ?? null)
+          }
+        />
+      </div>
 
-      <button
-        onClick={handleUpload}
-        disabled={loading}
-        className="px-4 py-2 bg-black text-white rounded-lg"
-      >
-        {loading
-          ? "Uploading..."
-          : "Upload Resume"}
-      </button>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button
+          onClick={handleUpload}
+          disabled={loading || !file}
+          className="btn btn-primary"
+        >
+          {loading ? "Uploading Resume..." : "Upload & Save Candidate"}
+        </button>
+      </div>
     </div>
   );
 }
