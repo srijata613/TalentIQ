@@ -1,7 +1,9 @@
 import { getJob } from "@/actions/get-job";
 import { getJobMatches } from "@/actions/get-job-matches";
+import CandidateComparisonWorkspace from "@/components/candidate-comparison-workspace";
 import ScoreRing from "@/components/score-ring";
 import ScoreBar from "@/components/score-bar";
+import ShortlistReviewWorkspace from "@/components/shortlist-review-workspace";
 import RunMatchingButton from "@/components/run-matching-button";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -10,36 +12,100 @@ export const metadata: Metadata = {
   title: "Candidate Matches | TalentIQ",
 };
 
+type MatchRecord = Record<string, unknown>;
+
 export default async function JobMatchesPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
   const [{ job }, matches] = await Promise.all([
     getJob(id),
     getJobMatches(id),
   ]);
 
-  const strongMatches = matches.filter(
-    (match: Record<string, unknown>) => {
-      const recommendation = String(
-        match.recommendation ?? "",
-      ).toLowerCase();
+  const strongMatches = matches.filter((match: MatchRecord) => {
+    const recommendation = String(
+      match.recommendation ?? "",
+    ).toLowerCase();
 
-      return recommendation.includes("strong");
-    },
-  ).length;
+    return recommendation.includes("strong");
+  }).length;
 
   const averageScore = matches.length
     ? Math.round(
         matches.reduce(
-          (total: number, match: Record<string, unknown>) =>
+          (total: number, match: MatchRecord) =>
             total + toPercent(match.final_score),
           0,
         ) / matches.length,
       )
     : 0;
+
+  /*
+   * Adapt saved match records to the comparison component's
+   * presentation model. This does not call the backend or write data.
+   */
+  const comparisonCandidates = matches.map(
+    (match: MatchRecord, index: number) => {
+      const candidate = asRecord(match.candidates);
+
+      const candidateId =
+        typeof candidate.id === "string"
+          ? candidate.id
+          : typeof match.candidate_id === "string"
+            ? match.candidate_id
+            : null;
+
+      const candidateName =
+        typeof candidate.parsed_name === "string" &&
+        candidate.parsed_name.trim()
+          ? candidate.parsed_name
+          : `Candidate ${index + 1}`;
+
+      const candidateEmail =
+        typeof candidate.parsed_email === "string"
+          ? candidate.parsed_email
+          : undefined;
+
+      return {
+        id:
+          candidateId ??
+          `saved-match-${String(match.id ?? index)}`,
+        name: candidateName,
+        email: candidateEmail,
+
+        score: toOptionalPercent(match.final_score),
+        skillScore: toOptionalPercent(match.skill_score),
+        experienceScore: toOptionalPercent(
+          match.experience_score,
+        ),
+        educationScore: toOptionalPercent(
+          match.education_score,
+        ),
+        certificationScore: toOptionalPercent(
+          match.certification_score,
+        ),
+        domainScore: toOptionalPercent(match.domain_score),
+
+        recommendation:
+          typeof match.recommendation === "string"
+            ? match.recommendation
+            : undefined,
+
+        matchedSkills: toStringList(match.matched_skills),
+        missingSkills: toStringList(match.missing_skills),
+        strengths: toStringList(match.strengths),
+        weaknesses: toStringList(match.weaknesses),
+
+        profileHref: candidateId
+          ? `/candidates/${candidateId}`
+          : undefined,
+      };
+    },
+  );
 
   if (!job) {
     return (
@@ -47,10 +113,13 @@ export default async function JobMatchesPage({
         <Link href="/jobs" className="back-link">
           ← Back to Jobs
         </Link>
+
         <section className="workspace-empty glass">
           <div className="workspace-empty-icon">⌕</div>
           <h2>Job not found</h2>
-          <p>Return to the jobs workspace and choose a saved role.</p>
+          <p>
+            Return to the jobs workspace and choose a saved role.
+          </p>
           <Link href="/jobs" className="btn btn-primary">
             View jobs
           </Link>
@@ -64,7 +133,9 @@ export default async function JobMatchesPage({
       <div className="workspace-breadcrumbs">
         <Link href="/jobs">Jobs</Link>
         <span>/</span>
-        <Link href={`/jobs/${id}`}>{job.title || "Job"}</Link>
+        <Link href={`/jobs/${id}`}>
+          {job.title || "Job"}
+        </Link>
         <span>/</span>
         <span>Candidate matches</span>
       </div>
@@ -72,16 +143,23 @@ export default async function JobMatchesPage({
       <header className="workspace-hero matches-hero">
         <div className="workspace-hero-copy">
           <div className="workspace-eyebrow">
-            <span className="workspace-eyebrow-dot" /> MATCH INTELLIGENCE
+            <span className="workspace-eyebrow-dot" />
+            MATCH INTELLIGENCE
           </div>
+
           <h1 className="page-title">Candidate matches</h1>
+
           <p className="page-subtitle">
             Review how each parsed candidate aligns with{" "}
-            <strong>{job.title || "this role"}</strong>, then open a profile
-            to inspect the details.
+            <strong>{job.title || "this role"}</strong>, then open a
+            profile to inspect the details.
           </p>
+
           <div className="workspace-meta-row">
-            <span className="badge badge-brand">Job-specific ranking</span>
+            <span className="badge badge-brand">
+              Job-specific ranking
+            </span>
+
             <span className="workspace-meta">
               {matches.length} saved match
               {matches.length === 1 ? "" : "es"}
@@ -90,9 +168,13 @@ export default async function JobMatchesPage({
         </div>
 
         <div className="workspace-hero-actions">
-          <Link href={`/jobs/${id}`} className="btn btn-secondary">
+          <Link
+            href={`/jobs/${id}`}
+            className="btn btn-secondary"
+          >
             Back to job
           </Link>
+
           <RunMatchingButton jobId={id} />
         </div>
       </header>
@@ -121,7 +203,9 @@ export default async function JobMatchesPage({
             <span>Average fit score</span>
             <span className="workspace-stat-icon">◉</span>
           </div>
-          <strong>{matches.length ? `${averageScore}%` : "—"}</strong>
+          <strong>
+            {matches.length ? `${averageScore}%` : "—"}
+          </strong>
           <small>
             {matches.length
               ? "Across saved results"
@@ -130,12 +214,19 @@ export default async function JobMatchesPage({
         </div>
       </div>
 
+      {/* Phase 3A: interactive candidate comparison */}
+      <CandidateComparisonWorkspace
+        jobTitle={String(job.title || "Selected role")}
+        candidates={comparisonCandidates}
+      />
+      <ShortlistReviewWorkspace candidates={comparisonCandidates} />
       <section className="workspace-section">
         <div className="workspace-section-heading">
           <div>
             <span className="workspace-kicker">LEADERBOARD</span>
             <h2>Ranked candidates</h2>
           </div>
+
           {matches.length > 0 && (
             <span className="workspace-section-caption">
               Sorted by saved final score
@@ -146,12 +237,17 @@ export default async function JobMatchesPage({
         {matches.length === 0 ? (
           <div className="glass workspace-empty matches-empty">
             <div className="workspace-empty-icon">◎</div>
+
             <h2>Find the best-aligned candidates</h2>
+
             <p>
-              Run matching to evaluate parsed candidate resumes against this
-              job description. Results are saved to the job’s leaderboard.
+              Run matching to evaluate parsed candidate resumes
+              against this job description. Results are saved to the
+              job’s leaderboard.
             </p>
+
             <RunMatchingButton jobId={id} />
+
             <span className="workspace-empty-footnote">
               Only candidates with parsed resume text can be evaluated.
             </span>
@@ -159,8 +255,9 @@ export default async function JobMatchesPage({
         ) : (
           <div className="matches-results-list">
             {matches.map(
-              (match: Record<string, unknown>, index: number) => {
+              (match: MatchRecord, index: number) => {
                 const candidate = asRecord(match.candidates);
+
                 const candidateId =
                   typeof candidate.id === "string"
                     ? candidate.id
@@ -192,9 +289,11 @@ export default async function JobMatchesPage({
                 const matchedSkills = toStringList(
                   match.matched_skills,
                 );
+
                 const missingSkills = toStringList(
                   match.missing_skills,
                 );
+
                 const strengths = toStringList(match.strengths);
                 const weaknesses = toStringList(match.weaknesses);
 
@@ -238,7 +337,9 @@ export default async function JobMatchesPage({
                               </h3>
                             )}
 
-                            {candidateEmail && <p>{candidateEmail}</p>}
+                            {candidateEmail && (
+                              <p>{candidateEmail}</p>
+                            )}
                           </div>
                         </div>
 
@@ -271,15 +372,14 @@ export default async function JobMatchesPage({
                     </div>
 
                     <div className="match-result-scores">
-                      {subScores.map(
-                        ([label, value]) =>
-                          value != null && (
-                            <ScoreBar
-                              key={label}
-                              label={label}
-                              score={toPercent(value)}
-                            />
-                          ),
+                      {subScores.map(([label, value]) =>
+                        value != null ? (
+                          <ScoreBar
+                            key={label}
+                            label={label}
+                            score={toPercent(value)}
+                          />
+                        ) : null,
                       )}
                     </div>
 
@@ -289,18 +389,24 @@ export default async function JobMatchesPage({
                         {matchedSkills.length > 0 && (
                           <div>
                             <h4>
-                              <span className="match-positive-mark">✓</span>{" "}
+                              <span className="match-positive-mark">
+                                ✓
+                              </span>{" "}
                               Matched skills
                             </h4>
+
                             <div className="workspace-chip-list">
-                              {matchedSkills.slice(0, 10).map((skill) => (
-                                <span
-                                  className="workspace-chip workspace-chip-brand"
-                                  key={skill}
-                                >
-                                  {skill}
-                                </span>
-                              ))}
+                              {matchedSkills
+                                .slice(0, 10)
+                                .map((skill) => (
+                                  <span
+                                    className="workspace-chip workspace-chip-brand"
+                                    key={skill}
+                                  >
+                                    {skill}
+                                  </span>
+                                ))}
+
                               {matchedSkills.length > 10 && (
                                 <span className="workspace-chip">
                                   +{matchedSkills.length - 10} more
@@ -313,18 +419,24 @@ export default async function JobMatchesPage({
                         {missingSkills.length > 0 && (
                           <div>
                             <h4>
-                              <span className="match-gap-mark">−</span>{" "}
+                              <span className="match-gap-mark">
+                                −
+                              </span>{" "}
                               Skills to review
                             </h4>
+
                             <div className="workspace-chip-list">
-                              {missingSkills.slice(0, 10).map((skill) => (
-                                <span
-                                  className="workspace-chip workspace-chip-muted"
-                                  key={skill}
-                                >
-                                  {skill}
-                                </span>
-                              ))}
+                              {missingSkills
+                                .slice(0, 10)
+                                .map((skill) => (
+                                  <span
+                                    className="workspace-chip workspace-chip-muted"
+                                    key={skill}
+                                  >
+                                    {skill}
+                                  </span>
+                                ))}
+
                               {missingSkills.length > 10 && (
                                 <span className="workspace-chip">
                                   +{missingSkills.length - 10} more
@@ -343,9 +455,13 @@ export default async function JobMatchesPage({
                           <div>
                             <h4>Strengths</h4>
                             <ul>
-                              {strengths.slice(0, 3).map((item, i) => (
-                                <li key={`${item}-${i}`}>{item}</li>
-                              ))}
+                              {strengths.slice(0, 3).map(
+                                (item, index) => (
+                                  <li key={`${item}-${index}`}>
+                                    {item}
+                                  </li>
+                                ),
+                              )}
                             </ul>
                           </div>
                         )}
@@ -354,9 +470,13 @@ export default async function JobMatchesPage({
                           <div>
                             <h4>Considerations</h4>
                             <ul>
-                              {weaknesses.slice(0, 3).map((item, i) => (
-                                <li key={`${item}-${i}`}>{item}</li>
-                              ))}
+                              {weaknesses.slice(0, 3).map(
+                                (item, index) => (
+                                  <li key={`${item}-${index}`}>
+                                    {item}
+                                  </li>
+                                ),
+                              )}
                             </ul>
                           </div>
                         )}
@@ -367,6 +487,7 @@ export default async function JobMatchesPage({
                       <span className="workspace-meta">
                         Score is specific to this job
                       </span>
+
                       {candidateId && (
                         <Link
                           href={`/candidates/${candidateId}`}
@@ -400,18 +521,49 @@ function toStringList(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter(
         (item): item is string =>
-          typeof item === "string" && item.trim().length > 0,
+          typeof item === "string" &&
+          item.trim().length > 0,
       )
     : [];
 }
 
 function toPercent(value: unknown): number {
-  const number = typeof value === "number" ? value : Number(value ?? 0);
+  const number =
+    typeof value === "number"
+      ? value
+      : Number(value ?? 0);
 
-  if (!Number.isFinite(number)) return 0;
+  if (!Number.isFinite(number)) {
+    return 0;
+  }
 
   return Math.round(
-    Math.max(0, Math.min(100, number <= 1 ? number * 100 : number)),
+    Math.max(
+      0,
+      Math.min(100, number <= 1 ? number * 100 : number),
+    ),
+  );
+}
+
+function toOptionalPercent(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const number =
+    typeof value === "number"
+      ? value
+      : Number(value);
+
+  if (!Number.isFinite(number)) {
+    return null;
+  }
+
+  return Math.round(
+    Math.max(
+      0,
+      Math.min(100, number <= 1 ? number * 100 : number),
+    ),
   );
 }
 

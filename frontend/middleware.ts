@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
+
 // The authenticated workspace spans every product route, not just the dashboard.
 // Public landing and account routes remain accessible without a session.
 const isProtectedRoute = createRouteMatcher([
@@ -10,6 +11,12 @@ const isProtectedRoute = createRouteMatcher([
   "/rank(.*)",
   "/search(.*)",
   "/analyze(.*)",
+  "/settings(.*)",
+
+  // New TalentIQ experiences
+  "/onboarding/role(.*)",
+  "/workspace(.*)",
+  "/seeker(.*)"
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
