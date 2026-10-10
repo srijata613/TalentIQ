@@ -1,170 +1,386 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 
-function DocumentIcon() {
+export const metadata: Metadata = {
+  title: "TalentIQ | Make better hiring decisions",
+  description:
+    "Turn resumes and job descriptions into explainable talent intelligence. Discover candidates, understand their fit, and make better-informed hiring decisions.",
+};
+
+function BrandMark({ large = false }: { large?: boolean }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
+    <span className={`tiq-brand-mark${large ? " tiq-brand-mark-large" : ""}`}>
+      <svg
+        viewBox="0 0 24 24"
+        width={large ? 25 : 21}
+        height={large ? 25 : 21}
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M13.5 2.5 5 13h6.2l-.8 8.5L19 10.5h-6.2l.7-8Z"
+          fill="currentColor"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 12h14M13 5l7 7-7 7" />
     </svg>
   );
 }
 
-function TargetIcon() {
+function FeatureIcon({ kind }: { kind: string }) {
+  const paths: Record<string, React.ReactNode> = {
+    resume: (
+      <>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+        <path d="M14 2v6h6M8 13h8M8 17h6" />
+      </>
+    ),
+    match: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="5" />
+        <circle cx="12" cy="12" r="1.5" />
+      </>
+    ),
+    ranking: (
+      <>
+        <path d="M4 19h16M6 15h3v4H6zM10.5 10h3v9h-3zM15 5h3v14h-3z" />
+      </>
+    ),
+    search: (
+      <>
+        <circle cx="10.8" cy="10.8" r="6.8" />
+        <path d="m16 16 4.5 4.5" />
+      </>
+    ),
+  };
+
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
-    </svg>
+    <span className="tiq-feature-icon">
+      <svg
+        width="23"
+        height="23"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        {paths[kind] ?? paths.resume}
+      </svg>
+    </span>
   );
 }
 
-function TrophyIcon() {
+function DashboardPreview() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-      <path d="M4 22h16" />
-      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-      <path d="M18 2H6v7a6 6 0 0 0 12 0V2z" />
-    </svg>
-  );
-}
+    <div className="tiq-preview">
+      <div className="tiq-preview-topbar">
+        <div className="tiq-preview-brand">
+          <BrandMark />
+          <span>TalentIQ</span>
+        </div>
+        <span className="tiq-preview-workspace">Recruiting workspace</span>
+        <span className="tiq-preview-avatar">R</span>
+      </div>
 
-function SearchIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6129" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
+      <div className="tiq-preview-content">
+        <div className="tiq-preview-heading">
+          <div>
+            <span className="tiq-preview-overline">YOUR WORKSPACE</span>
+            <h3>Talent at a glance.</h3>
+            <p>Everything you need to evaluate talent.</p>
+          </div>
+          <span className="tiq-preview-add">＋ New job</span>
+        </div>
+
+        <div className="tiq-preview-metrics">
+          <div className="tiq-preview-metric">
+            <span>Active roles</span>
+            <strong>12</strong>
+            <span className="tiq-preview-metric-icon">▤</span>
+          </div>
+          <div className="tiq-preview-metric">
+            <span>Talent pool</span>
+            <strong>248</strong>
+            <span className="tiq-preview-metric-icon">♙</span>
+          </div>
+          <div className="tiq-preview-metric">
+            <span>Job matches</span>
+            <strong>84</strong>
+            <span className="tiq-preview-metric-icon">◎</span>
+          </div>
+        </div>
+
+        <div className="tiq-preview-table">
+          <div className="tiq-preview-table-heading">
+            <strong>Candidate matches</strong>
+            <span>Illustrative preview</span>
+          </div>
+
+          {[
+            {
+              initials: "AC",
+              name: "Alex Chen",
+              role: "Senior Python Engineer",
+              score: 92,
+            },
+            {
+              initials: "PS",
+              name: "Priya Sharma",
+              role: "Machine Learning Engineer",
+              score: 86,
+            },
+            {
+              initials: "DK",
+              name: "Daniel Kim",
+              role: "Backend Engineer",
+              score: 79,
+            },
+          ].map((candidate) => (
+            <div className="tiq-preview-row" key={candidate.name}>
+              <span className="tiq-preview-candidate-avatar">
+                {candidate.initials}
+              </span>
+              <span className="tiq-preview-candidate-copy">
+                <strong>{candidate.name}</strong>
+                <small>{candidate.role}</small>
+              </span>
+              <span className="tiq-preview-score">
+                <span>{candidate.score}%</span>
+                <span className="tiq-preview-score-track">
+                  <span style={{ width: `${candidate.score}%` }} />
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="tiq-preview-footnote">
+          <span>✦</span>
+          Understand the fit, not just the score.
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default async function LandingPage() {
   const { userId } = await auth();
+
   if (userId) {
     redirect("/dashboard");
   }
 
+  const features = [
+    {
+      kind: "resume",
+      title: "Understand every resume",
+      description:
+        "Extract skills, experience, education, and qualifications into structured candidate profiles.",
+    },
+    {
+      kind: "match",
+      title: "Match with context",
+      description:
+        "Evaluate candidates against actual job requirements, with visibility into strengths and gaps.",
+    },
+    {
+      kind: "ranking",
+      title: "Compare with confidence",
+      description:
+        "Review ranked candidates, inspect their fit, and keep the recruiter in control of every decision.",
+    },
+    {
+      kind: "search",
+      title: "Discover relevant talent",
+      description:
+        "Find candidates using skills, experience, domain criteria, and semantic search.",
+    },
+  ];
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#000000",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "40px 24px",
-        textAlign: "center",
-      }}
-    >
-      {/* Brand Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 48 }}>
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 10,
-            background: "#FF6129",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-          </svg>
+    <main className="tiq-landing">
+      <nav className="tiq-nav">
+        <Link href="/" className="tiq-brand" aria-label="TalentIQ home">
+          <BrandMark large />
+          <span>Talent<span className="tiq-brand-accent">IQ</span></span>
+        </Link>
+
+        <div className="tiq-nav-links">
+          <a href="#features">Platform</a>
+          <a href="#how-it-works">How it works</a>
         </div>
-        <span
-          style={{
-            fontSize: "1.75rem",
-            fontWeight: 800,
-            color: "#FFFFFF",
-          }}
-        >
-          TalentIQ
-        </span>
+
+        <div className="tiq-nav-actions">
+          <Link href="/sign-in" className="tiq-nav-signin">
+            Sign in
+          </Link>
+          <Link href="/sign-up" className="tiq-button tiq-button-primary">
+            Get started <ArrowIcon />
+          </Link>
+        </div>
+      </nav>
+
+      <section className="tiq-hero">
+        <div className="tiq-hero-copy">
+
+          <h1>
+            Better talent.
+            <br />
+            <span>Better decisions.</span>
+          </h1>
+
+          <p className="tiq-hero-description">
+            Recruitment is more than matching keywords. Understand the
+            experience behind every resume, evaluate candidates against the
+            role, and make informed hiring decisions.
+          </p>
+
+          <div className="tiq-hero-actions">
+            <Link
+              href="/sign-up"
+              className="tiq-button tiq-button-primary tiq-button-large"
+            >
+              Explore TalentIQ <ArrowIcon />
+            </Link>
+            <Link
+              href="/sign-in"
+              className="tiq-button tiq-button-secondary tiq-button-large"
+            >
+              Sign in to workspace
+            </Link>
+          </div>
+        </div>
+
+        <div className="tiq-hero-visual">
+          <div className="tiq-visual-glow" />
+          <DashboardPreview />
+          <div className="tiq-floating-note">
+            <span className="tiq-floating-note-icon">✦</span>
+            <span>
+              <strong>More context, less guesswork</strong>
+              <small>Built around real job requirements</small>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <div className="tiq-capability-strip">
+        <span>One workspace for the hiring process</span>
+        <div>
+          <span>Resume intelligence</span>
+          <span>Candidate matching</span>
+          <span>Talent discovery</span>
+        </div>
       </div>
 
-      {/* Hero Headline */}
-      <h1
-        style={{
-          fontSize: "clamp(2.5rem, 6vw, 4rem)",
-          fontWeight: 800,
-          lineHeight: 1.15,
-          maxWidth: 750,
-          margin: "0 0 20px",
-          color: "#FFFFFF",
-        }}
-      >
-        AI-Powered{" "}
-        <span style={{ color: "#FF6129" }}>
-          Talent Intelligence
-        </span>{" "}
-        Platform
-      </h1>
+      <section className="tiq-features" id="features">
+        <div className="tiq-section-heading">
+          <span className="tiq-eyebrow">THE TALENTIQ WORKFLOW</span>
+          <h2>
+            From resumes to
+            <br />
+            <span>real hiring insight.</span>
+          </h2>
+          <p>
+            Bring job requirements, candidate information, and AI-assisted
+            evaluation together in one focused workspace.
+          </p>
+        </div>
 
-      <p
-        style={{
-          fontSize: "1.125rem",
-          color: "#A1A1AA",
-          maxWidth: 580,
-          lineHeight: 1.7,
-          margin: "0 0 48px",
-        }}
-      >
-        Parse resumes, analyze job descriptions, and match candidates with
-        semantic precision. Built for recruiters who want real intelligence, not
-        just keyword matching.
-      </p>
+        <div className="tiq-feature-grid">
+          {features.map((feature, index) => (
+            <article className="tiq-feature-card" key={feature.title}>
+              <div className="tiq-feature-card-top">
+                <FeatureIcon kind={feature.kind} />
+                <span className="tiq-feature-number">
+                  0{index + 1}
+                </span>
+              </div>
+              <h3>{feature.title}</h3>
+              <p>{feature.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
-      {/* Action Buttons */}
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center", marginBottom: 64 }}>
-        <Link
-          href="/sign-in"
-          className="btn btn-primary btn-lg"
-          style={{ minWidth: 160 }}
-        >
-          Sign In
-        </Link>
+      <section className="tiq-how" id="how-it-works">
+        <div>
+          <span className="tiq-eyebrow">A CLEARER PROCESS</span>
+          <h2>Keep the hiring process connected.</h2>
+          <p>
+            Start with a job, build your talent pool, and evaluate candidates
+            in the context of the role you are hiring for.
+          </p>
+        </div>
+
+        <div className="tiq-steps">
+          {[
+            ["01", "Define the role", "Add or import a job description."],
+            ["02", "Build your talent pool", "Upload resumes and review parsed profiles."],
+            ["03", "Evaluate the fit", "Compare matching evidence and make your decision."],
+          ].map(([number, title, description]) => (
+            <div className="tiq-step" key={number}>
+              <span>{number}</span>
+              <div>
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="tiq-final-cta">
+        <div className="tiq-final-cta-copy">
+          <span className="tiq-eyebrow">YOUR NEXT HIRING DECISION</span>
+          <h2>Start with a clearer picture of your talent.</h2>
+          <p>
+            Bring your roles and candidate profiles into a workspace designed
+            around recruiter decisions.
+          </p>
+        </div>
+
         <Link
           href="/sign-up"
-          className="btn btn-secondary btn-lg"
-          style={{ minWidth: 160 }}
+          className="tiq-button tiq-button-primary tiq-button-large"
         >
-          Create Account
+          Get started <ArrowIcon />
         </Link>
-      </div>
+      </section>
 
-      {/* Features Grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 16,
-          maxWidth: 860,
-          width: "100%",
-        }}
-      >
-        {[
-          { icon: <DocumentIcon />, title: "Resume Analysis", desc: "Deep parsing of skills, experience, and credentials" },
-          { icon: <TargetIcon />, title: "Smart Matching", desc: "Semantic scoring across 6 dimensions" },
-          { icon: <TrophyIcon />, title: "Candidate Ranking", desc: "Batch ranking with explainable scores" },
-          { icon: <SearchIcon />, title: "Candidate Search", desc: "Filter by skills, domain, and fit score" },
-        ].map((f) => (
-          <div key={f.title} className="glass" style={{ padding: "24px 20px", textAlign: "left", borderRadius: 12 }}>
-            <div style={{ marginBottom: 12 }}>{f.icon}</div>
-            <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#FFFFFF", marginBottom: 6 }}>{f.title}</div>
-            <div style={{ fontSize: "0.8125rem", color: "#A1A1AA", lineHeight: 1.5 }}>{f.desc}</div>
-          </div>
-        ))}
-      </div>
+      <footer className="tiq-footer">
+        <Link href="/" className="tiq-brand tiq-footer-brand">
+          <BrandMark />
+          <span>Talent<span className="tiq-brand-accent">IQ</span></span>
+        </Link>
+        <div>
+          <Link href="/sign-in">Sign in</Link>
+          <Link href="/sign-up">Create account</Link>
+        </div>
+      </footer>
     </main>
   );
 }

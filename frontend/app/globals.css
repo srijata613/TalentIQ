@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -32,7 +32,7 @@
 
 .sidebar-collapsed { --sidebar-w: 76px; }
 * { box-sizing: border-box; }
-html, body { min-height: 100%; margin: 0; padding: 0; background: var(--bg-app); color: var(--text-primary); font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+html, body { min-height: 100%; margin: 0; padding: 0; background: var(--bg-app); color: var(--text-primary); font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
 body { font-size: 14px; }
 a { color: inherit; }
 button, input, textarea, select { font: inherit; }
@@ -1923,5 +1923,1505 @@ a.match-candidate-name:hover {
 
   .dashboard-stats .stat-value {
     font-size: 23px;
+  }
+}
+
+/* =========================================================
+   TALENTIQ PUBLIC PAGES
+   Landing page and authentication
+   ========================================================= */
+
+.tiq-landing {
+  --tiq-orange: #ff6129;
+  --tiq-bg: #050507;
+  --tiq-panel: #111114;
+  min-height: 100vh;
+  overflow: hidden;
+  color: #f4f4f5;
+  background:
+    radial-gradient(
+      ellipse at 78% 16%,
+      rgba(255, 97, 41, 0.055),
+      transparent 34%
+    ),
+    var(--tiq-bg);
+  font-family: "Manrope, sans-serif", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.tiq-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #f9fafb;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  text-decoration: none;
+}
+
+.tiq-brand-accent {
+  color: #ff6129;
+}
+
+.tiq-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(145deg, #ff794d, #f34a13);
+  box-shadow: 0 5px 20px rgba(255, 97, 41, 0.18);
+}
+
+.tiq-brand-mark-large {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.tiq-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.tiq-button:hover {
+  transform: translateY(-1px);
+}
+
+.tiq-button-primary {
+  color: #fff;
+  background: #ff6129;
+  box-shadow: 0 5px 18px rgba(255, 97, 41, 0.12);
+}
+
+.tiq-button-primary:hover {
+  background: #fc3b00;
+}
+
+.tiq-button-secondary {
+  color: #ededf0;
+  border-color: #34343b;
+  background: #111114;
+}
+
+.tiq-button-secondary:hover {
+  border-color: #56565f;
+  background: #19191e;
+}
+
+.tiq-button-large {
+  min-height: 47px;
+  padding: 13px 19px;
+  font-size: 13px;
+}
+
+.tiq-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #a1a1aa;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+  line-height: 1.5;
+}
+
+
+/* Navigation */
+
+.tiq-nav {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  max-width: 1400px;
+  min-height: 85px;
+  margin: 0 auto;
+  padding: 17px 46px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.tiq-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.tiq-nav-links a,
+.tiq-nav-signin {
+  color: #a1a1aa;
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.tiq-nav-links a:hover,
+.tiq-nav-signin:hover {
+  color: #fff;
+}
+
+.tiq-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+/* Hero */
+
+.tiq-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 55px;
+  max-width: 1400px;
+  min-height: 620px;
+  margin: 0 auto;
+  padding: 78px 46px 85px;
+}
+
+.tiq-hero-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.tiq-hero-copy h1 {
+  margin: 25px 0 0;
+  color: #fafafa;
+  font-size: clamp(43px, 5.1vw, 69px);
+  font-weight: 780;
+  letter-spacing: -0.065em;
+  line-height: 1.08;
+}
+
+.tiq-hero-copy h1 > span {
+  color: #ff6129;
+}
+
+.tiq-hero-description {
+  max-width: 500px;
+  margin: 23px 0 0;
+  color: #a1a1aa;
+  font-size: 15px;
+  line-height: 1.95;
+}
+
+.tiq-hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.tiq-hero-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 27px;
+  color: #898993;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* Product preview */
+
+.tiq-hero-visual {
+  position: relative;
+  min-width: 0;
+  padding: 5px 0 25px;
+}
+
+.tiq-visual-glow {
+  position: absolute;
+  inset: 10% -10% 0;
+  z-index: 0;
+  border-radius: 50%;
+  background: rgba(255, 97, 41, 0.09);
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+.tiq-preview {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border: 1px solid #353038;
+  border-radius: 16px;
+  background: #0c0c0f;
+  box-shadow:
+    0 35px 100px rgba(0, 0, 0, 0.44),
+    0 0 60px rgba(255, 97, 41, 0.035);
+  transform: perspective(1400px) rotateY(-3deg) rotateX(1deg);
+  transform-origin: center;
+}
+
+.tiq-preview-topbar {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 60px;
+  padding: 12px 17px;
+  border-bottom: 1px solid #25252b;
+  background: #101013;
+}
+
+.tiq-preview-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  color: #f4f4f5;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.tiq-preview-brand .tiq-brand-mark {
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
+}
+
+.tiq-preview-brand .tiq-brand-mark svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tiq-preview-workspace {
+  flex: 1;
+  color: #777780;
+  font-size: 10px;
+  text-align: right;
+}
+
+.tiq-preview-avatar,
+.tiq-preview-candidate-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid #45302a;
+  border-radius: 9px;
+  color: #ffb49a;
+  background: #221916;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tiq-preview-avatar {
+  width: 29px;
+  height: 29px;
+}
+
+.tiq-preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 19px;
+  padding: 25px 23px 19px;
+}
+
+.tiq-preview-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.tiq-preview-overline {
+  color: #85858f;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.tiq-preview-heading h3 {
+  margin: 9px 0 0;
+  color: #f4f4f5;
+  font-size: clamp(18px, 2vw, 25px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+
+.tiq-preview-heading p {
+  margin: 7px 0 0;
+  color: #85858f;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.tiq-preview-add {
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 97, 41, 0.25);
+  border-radius: 7px;
+  color: #ffb49a;
+  background: rgba(255, 97, 41, 0.08);
+  font-size: 9px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.tiq-preview-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tiq-preview-metric {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #29292f;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #151518, #101013);
+}
+
+.tiq-preview-metric > span:first-child {
+  color: #92929c;
+  font-size: 9px;
+}
+
+.tiq-preview-metric > strong {
+  color: #f4f4f5;
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -0.045em;
+}
+
+.tiq-preview-metric-icon {
+  position: absolute;
+  top: 10px;
+  right: 9px;
+  color: #ff8a5e;
+  font-size: 15px;
+}
+
+.tiq-preview-table {
+  overflow: hidden;
+  border: 1px solid #29292f;
+  border-radius: 10px;
+  background: #101013;
+}
+
+.tiq-preview-table-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid #29292f;
+}
+
+.tiq-preview-table-heading strong {
+  color: #e4e4e7;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.tiq-preview-table-heading > span {
+  color: #71717a;
+  font-size: 9px;
+}
+
+.tiq-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid #24242a;
+}
+
+.tiq-preview-row:last-child {
+  border-bottom: 0;
+}
+
+.tiq-preview-candidate-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.tiq-preview-candidate-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.tiq-preview-candidate-copy strong {
+  overflow: hidden;
+  color: #e4e4e7;
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tiq-preview-candidate-copy small {
+  overflow: hidden;
+  color: #85858f;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tiq-preview-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  width: 67px;
+  flex: 0 0 auto;
+}
+
+.tiq-preview-score > span:first-child {
+  color: #ff986e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tiq-preview-score-track {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #303037;
+}
+
+.tiq-preview-score-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #ff6129;
+}
+
+.tiq-preview-footnote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9b9ba4;
+  font-size: 10px;
+}
+
+.tiq-preview-footnote > span {
+  color: #ff8a5e;
+  font-size: 15px;
+}
+
+.tiq-floating-note {
+  position: absolute;
+  right: -17px;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  max-width: calc(100% - 20px);
+  padding: 13px 16px;
+  border: 1px solid #3a302d;
+  border-radius: 11px;
+  background: rgba(20, 18, 19, 0.94);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(15px);
+}
+
+.tiq-floating-note-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  color: #ff986e;
+  background: rgba(255, 97, 41, 0.12);
+}
+
+.tiq-floating-note > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tiq-floating-note strong {
+  color: #e4e4e7;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.tiq-floating-note small {
+  color: #85858f;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+/* Capability strip */
+
+.tiq-capability-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  max-width: 1308px;
+  margin: 0 auto;
+  padding: 22px 30px;
+  border-top: 1px solid #202025;
+  border-bottom: 1px solid #202025;
+}
+
+.tiq-capability-strip > span {
+  color: #b4b4bd;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tiq-capability-strip > div {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.tiq-capability-strip > div > span {
+  color: #85858f;
+  font-size: 11px;
+}
+
+.tiq-capability-strip i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ff6129;
+}
+
+/* Feature cards */
+
+.tiq-features {
+  max-width: 1308px;
+  margin: 0 auto;
+  padding: 105px 30px;
+}
+
+.tiq-section-heading {
+  max-width: 650px;
+  margin: 0 auto 45px;
+  text-align: center;
+}
+
+.tiq-section-heading h2,
+.tiq-how h2 {
+  margin: 16px 0 0;
+  color: #f4f4f5;
+  font-size: clamp(29px, 4vw, 43px);
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 1.17;
+}
+
+.tiq-section-heading h2 span {
+  color: #ff8a5e;
+}
+
+.tiq-section-heading > p {
+  max-width: 560px;
+  margin: 16px auto 0;
+  color: #a1a1aa;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.tiq-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.tiq-feature-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 235px;
+  padding: 21px;
+  border: 1px solid #29292f;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #141417, #0e0e11);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease;
+}
+
+.tiq-feature-card:hover {
+  transform: translateY(-3px);
+  border-color: #46332d;
+}
+
+.tiq-feature-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.tiq-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 43px;
+  height: 43px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 97, 41, 0.19);
+  border-radius: 12px;
+  color: #ff8a5e;
+  background: rgba(255, 97, 41, 0.08);
+}
+
+.tiq-feature-number {
+  color: #56565f;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.tiq-feature-card h3 {
+  margin: 0;
+  color: #efeff1;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.5;
+}
+
+.tiq-feature-card p {
+  margin: 10px 0 0;
+  color: #92929c;
+  font-size: 11px;
+  line-height: 1.85;
+}
+
+/* How it works */
+
+.tiq-how {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 75px;
+  max-width: 1308px;
+  margin: 0 auto;
+  padding: 0 30px 105px;
+}
+
+.tiq-how > div:first-child {
+  max-width: 490px;
+}
+
+.tiq-how h2 {
+  font-size: clamp(28px, 3.2vw, 39px);
+}
+
+.tiq-how > div:first-child > p {
+  margin: 17px 0 0;
+  color: #a1a1aa;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.tiq-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #29292f;
+  border-radius: 13px;
+  background: #0d0d10;
+}
+
+.tiq-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 17px;
+  padding: 21px;
+  border-bottom: 1px solid #25252b;
+}
+
+.tiq-step:last-child {
+  border-bottom: 0;
+}
+
+.tiq-step > span {
+  color: #ff8a5e;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+}
+
+.tiq-step h3 {
+  margin: 0;
+  color: #ededf0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.tiq-step p {
+  margin: 6px 0 0;
+  color: #85858f;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+/* Final CTA and footer */
+
+.tiq-final-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 35px;
+  max-width: 1248px;
+  margin: 0 auto 80px;
+  padding: 37px;
+  border: 1px solid rgba(255, 97, 41, 0.2);
+  border-radius: 15px;
+  background:
+    radial-gradient(
+      ellipse at 0% 50%,
+      rgba(255, 97, 41, 0.09),
+      transparent 65%
+    ),
+    #101013;
+}
+
+.tiq-final-cta-copy {
+  max-width: 650px;
+}
+
+.tiq-final-cta h2 {
+  margin: 12px 0 0;
+  color: #f4f4f5;
+  font-size: clamp(24px, 3vw, 33px);
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  line-height: 1.25;
+}
+
+.tiq-final-cta p {
+  margin: 11px 0 0;
+  color: #a1a1aa;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.tiq-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  max-width: 1308px;
+  margin: 0 auto;
+  padding: 24px 30px 30px;
+  border-top: 1px solid #202025;
+}
+
+.tiq-footer-brand {
+  font-size: 16px;
+}
+
+.tiq-footer-brand .tiq-brand-mark {
+  width: 29px;
+  height: 29px;
+  border-radius: 8px;
+}
+
+.tiq-footer > span {
+  color: #777780;
+  font-size: 10px;
+  text-align: center;
+}
+
+.tiq-footer > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 17px;
+}
+
+.tiq-footer > div a {
+  color: #92929c;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.tiq-footer > div a:hover {
+  color: #ff986e;
+}
+
+/* Authentication layout */
+
+.tiq-auth-page {
+  min-height: 100vh;
+  color: #f4f4f5;
+  background:
+    radial-gradient(
+      ellipse at 0% 0%,
+      rgba(255, 97, 41, 0.07),
+      transparent 35%
+    ),
+    #050507;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.tiq-auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.94fr) minmax(440px, 1.06fr);
+  min-height: 100vh;
+}
+
+.tiq-auth-story {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 37px clamp(30px, 5vw, 74px) 29px;
+  overflow: hidden;
+  border-right: 1px solid #25252b;
+  background:
+    radial-gradient(
+      ellipse at 0% 95%,
+      rgba(255, 97, 41, 0.11),
+      transparent 50%
+    ),
+    linear-gradient(145deg, #111114, #08080a 70%);
+}
+
+.tiq-auth-story::after {
+  position: absolute;
+  right: -100px;
+  bottom: -150px;
+  width: 400px;
+  height: 400px;
+  border: 1px solid rgba(255, 97, 41, 0.08);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 40px rgba(255, 97, 41, 0.018),
+    0 0 0 90px rgba(255, 97, 41, 0.014);
+  content: "";
+  pointer-events: none;
+}
+
+.tiq-auth-story-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 490px;
+  margin: 65px auto;
+}
+
+.tiq-auth-story-content h1 {
+  margin: 23px 0 0;
+  color: #f9fafb;
+  font-size: clamp(39px, 4.4vw, 60px);
+  font-weight: 780;
+  letter-spacing: -0.065em;
+  line-height: 1.1;
+}
+
+.tiq-auth-story-content h1 > span {
+  color: #ff6129;
+}
+
+.tiq-auth-story-content > p {
+  max-width: 440px;
+  margin: 20px 0 0;
+  color: #a1a1aa;
+  font-size: 13px;
+  line-height: 1.95;
+}
+
+.tiq-auth-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  margin-top: 39px;
+}
+
+.tiq-auth-benefits > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.tiq-auth-benefit-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 97, 41, 0.19);
+  border-radius: 10px;
+  color: #ff986e;
+  background: rgba(255, 97, 41, 0.08);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.tiq-auth-benefits > div > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 1px;
+}
+
+.tiq-auth-benefits strong {
+  color: #e4e4e7;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.tiq-auth-benefits small {
+  color: #85858f;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.tiq-auth-side-footer {
+  position: relative;
+  z-index: 1;
+  color: #777780;
+  font-size: 10px;
+}
+
+.tiq-auth-form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 55px clamp(24px, 5vw, 78px);
+  background: rgba(5, 5, 7, 0.7);
+}
+
+.tiq-auth-form-container {
+  width: 100%;
+  max-width: 430px;
+}
+
+.tiq-auth-form-heading {
+  margin-bottom: 25px;
+}
+
+.tiq-auth-form-heading h2 {
+  margin: 9px 0 0;
+  color: #f4f4f5;
+  font-size: 27px;
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  line-height: 1.3;
+}
+
+.tiq-auth-form-heading > p {
+  margin: 9px 0 0;
+  color: #92929c;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.tiq-clerk-card {
+  width: 100%;
+  min-width: 0;
+  padding: 23px;
+  border: 1px solid #29292f;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #131316, #0f0f12);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.2);
+}
+
+.tiq-clerk-card .cl-rootBox,
+.tiq-clerk-card .cl-cardBox,
+.tiq-clerk-card .cl-card {
+  width: 100%;
+  max-width: 100%;
+}
+
+.tiq-auth-switch {
+  margin-top: 22px;
+  color: #92929c;
+  font-size: 11px;
+  text-align: center;
+}
+
+.tiq-auth-switch a {
+  margin-left: 4px;
+  color: #ff986e;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.tiq-auth-switch a:hover {
+  color: #ffc0aa;
+  text-decoration: underline;
+}
+
+.tiq-auth-bottom-note {
+  margin: 29px auto 0;
+  max-width: 360px;
+  color: #65656f;
+  font-size: 10px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+.tiq-auth-mobile-brand {
+  display: none;
+}
+
+/* Clerk form elements inside our branded auth panel */
+
+.tiq-clerk-card .cl-formFieldLabel,
+.tiq-clerk-card .cl-formFieldLabel__label {
+  color: #b4b4bd;
+}
+
+.tiq-clerk-card .cl-formFieldInput {
+  color: #f4f4f5;
+  border-color: #34343b;
+  background: #0b0b0e;
+}
+
+.tiq-clerk-card .cl-formFieldInput:focus {
+  border-color: #ff6129;
+  box-shadow: 0 0 0 3px rgba(255, 97, 41, 0.09);
+}
+
+.tiq-clerk-card .cl-formButtonPrimary {
+  color: #fff;
+  background: #ff6129;
+  box-shadow: none;
+}
+
+.tiq-clerk-card .cl-formButtonPrimary:hover {
+  background: #fc3b00;
+}
+
+.tiq-clerk-card .cl-socialButtonsBlockButton {
+  color: #e4e4e7;
+  border-color: #34343b;
+  background: #17171b;
+}
+
+.tiq-clerk-card .cl-socialButtonsBlockButton:hover {
+  background: #202025;
+}
+
+.tiq-clerk-card .cl-footer,
+.tiq-clerk-card .cl-footerAction {
+  display: none;
+}
+
+/* Responsive landing page and authentication */
+
+@media (max-width: 1100px) {
+  .tiq-hero {
+    gap: 32px;
+    padding-right: 30px;
+    padding-left: 30px;
+  }
+
+  .tiq-preview-content {
+    padding: 18px;
+  }
+
+  .tiq-preview-metric {
+    padding: 10px;
+  }
+
+  .tiq-preview-metric > strong {
+    font-size: 20px;
+  }
+
+  .tiq-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tiq-how {
+    gap: 38px;
+  }
+
+  .tiq-auth-layout {
+    grid-template-columns: minmax(0, 0.85fr) minmax(400px, 1.15fr);
+  }
+}
+
+@media (max-width: 820px) {
+  .tiq-nav {
+    min-height: 75px;
+    padding: 15px 22px;
+  }
+
+  .tiq-nav-links {
+    display: none;
+  }
+
+  .tiq-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 47px;
+    padding: 75px 25px 65px;
+  }
+
+  .tiq-hero-copy {
+    max-width: 680px;
+  }
+
+  .tiq-hero-copy h1 {
+    font-size: clamp(45px, 9vw, 69px);
+  }
+
+  .tiq-hero-visual {
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  .tiq-preview {
+    transform: none;
+  }
+
+  .tiq-capability-strip {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    padding: 21px 25px;
+  }
+
+  .tiq-capability-strip > div {
+    justify-content: flex-start;
+  }
+
+  .tiq-features {
+    padding: 76px 25px;
+  }
+
+  .tiq-how {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    padding: 0 25px 76px;
+  }
+
+  .tiq-final-cta {
+    margin-right: 25px;
+    margin-left: 25px;
+    padding: 27px;
+  }
+
+  .tiq-footer {
+    padding-right: 25px;
+    padding-left: 25px;
+  }
+
+  .tiq-auth-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tiq-auth-story {
+    display: none;
+  }
+
+  .tiq-auth-form-side {
+    align-items: flex-start;
+    padding: 28px 22px 48px;
+  }
+
+  .tiq-auth-mobile-brand {
+    display: block;
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto 42px;
+  }
+
+  .tiq-auth-form-container {
+    max-width: 430px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 540px) {
+  .tiq-nav {
+    gap: 12px;
+    padding: 13px 16px;
+  }
+
+  .tiq-brand {
+    gap: 8px;
+    font-size: 18px;
+  }
+
+  .tiq-brand-mark-large {
+    width: 35px;
+    height: 35px;
+  }
+
+  .tiq-nav-actions {
+    gap: 12px;
+  }
+
+  .tiq-nav-actions .tiq-button {
+    min-height: 36px;
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+
+  .tiq-nav-signin {
+    font-size: 11px;
+  }
+
+  .tiq-hero {
+    padding: 57px 17px 53px;
+  }
+
+  .tiq-hero-copy h1 {
+    margin-top: 20px;
+    font-size: clamp(41px, 11vw, 55px);
+  }
+
+  .tiq-hero-description {
+    font-size: 13px;
+  }
+
+  .tiq-hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tiq-hero-actions .tiq-button {
+    width: 100%;
+  }
+
+  .tiq-preview-topbar {
+    padding: 10px;
+  }
+
+  .tiq-preview-workspace {
+    display: none;
+  }
+
+  .tiq-preview-content {
+    gap: 14px;
+    padding: 14px 10px;
+  }
+
+  .tiq-preview-heading {
+    align-items: flex-start;
+  }
+
+  .tiq-preview-heading h3 {
+    font-size: 18px;
+  }
+
+  .tiq-preview-heading p {
+    font-size: 9px;
+  }
+
+  .tiq-preview-add {
+    padding: 7px;
+    font-size: 8px;
+  }
+
+  .tiq-preview-metrics {
+    gap: 6px;
+  }
+
+  .tiq-preview-metric {
+    gap: 8px;
+    padding: 9px;
+  }
+
+  .tiq-preview-metric > span:first-child {
+    font-size: 8px;
+  }
+
+  .tiq-preview-metric > strong {
+    font-size: 19px;
+  }
+
+  .tiq-preview-metric-icon {
+    display: none;
+  }
+
+  .tiq-preview-row {
+    gap: 7px;
+    padding: 10px 8px;
+  }
+
+  .tiq-preview-candidate-avatar {
+    width: 29px;
+    height: 29px;
+  }
+
+  .tiq-preview-candidate-copy strong {
+    font-size: 9px;
+  }
+
+  .tiq-preview-candidate-copy small {
+    font-size: 8px;
+  }
+
+  .tiq-preview-score {
+    width: 45px;
+  }
+
+  .tiq-preview-score > span:first-child {
+    font-size: 9px;
+  }
+
+  .tiq-floating-note {
+    right: -3px;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .tiq-floating-note strong {
+    font-size: 9px;
+  }
+
+  .tiq-capability-strip {
+    padding: 20px 17px;
+  }
+
+  .tiq-capability-strip > div {
+    gap: 10px;
+  }
+
+  .tiq-capability-strip > div > span {
+    font-size: 9px;
+  }
+
+  .tiq-features {
+    padding: 65px 17px;
+  }
+
+  .tiq-section-heading {
+    margin-bottom: 30px;
+  }
+
+  .tiq-section-heading h2,
+  .tiq-how h2 {
+    font-size: 31px;
+  }
+
+  .tiq-section-heading > p,
+  .tiq-how > div:first-child > p {
+    font-size: 12px;
+  }
+
+  .tiq-feature-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tiq-feature-card {
+    min-height: auto;
+    padding: 19px;
+  }
+
+  .tiq-feature-card-top {
+    margin-bottom: 17px;
+  }
+
+  .tiq-how {
+    padding: 0 17px 65px;
+  }
+
+  .tiq-step {
+    padding: 17px;
+  }
+
+  .tiq-final-cta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 22px;
+    margin-right: 17px;
+    margin-bottom: 50px;
+    margin-left: 17px;
+    padding: 22px;
+  }
+
+  .tiq-final-cta h2 {
+    font-size: 26px;
+  }
+
+  .tiq-footer {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 17px;
+    padding: 21px 17px 25px;
+  }
+
+  .tiq-footer > span {
+    order: 3;
+    flex-basis: 100%;
+    text-align: left;
+  }
+
+  .tiq-footer > div {
+    margin-left: auto;
+    gap: 12px;
+  }
+
+  .tiq-footer > div a {
+    font-size: 10px;
+  }
+
+  .tiq-auth-form-side {
+    padding: 23px 16px 35px;
+  }
+
+  .tiq-auth-mobile-brand {
+    margin-bottom: 32px;
+  }
+
+  .tiq-auth-form-heading h2 {
+    font-size: 25px;
+  }
+
+  .tiq-clerk-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .tiq-auth-bottom-note {
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tiq-landing *,
+  .tiq-auth-page * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
