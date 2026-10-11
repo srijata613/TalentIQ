@@ -1,12 +1,16 @@
 "use server";
 
 import { currentUser } from "@clerk/nextjs/server";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function syncUser() {
   const user = await currentUser();
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
+
+  const supabase = createSupabaseServerClient();
 
   const { data: existingUser, error: selectError } = await supabase
     .from("users")
@@ -14,7 +18,9 @@ export async function syncUser() {
     .eq("clerk_user_id", user.id)
     .maybeSingle();
 
-  console.log("SELECT ERROR:", selectError);
+  if (selectError) {
+    throw new Error("Unable to check the existing database user.");
+  }
 
   if (existingUser) {
     return existingUser;
@@ -31,7 +37,9 @@ export async function syncUser() {
     .select()
     .maybeSingle();
 
-  console.log("INSERT ERROR:", insertError);
+  if (insertError || !data) {
+    throw new Error("Unable to synchronize your account with the database.");
+  }
 
   return data;
 }

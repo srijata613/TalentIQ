@@ -1,38 +1,38 @@
 "use server";
 
-import { currentUser } from "@clerk/nextjs/server";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { requireAuthenticatedContext } from "@/lib/authorization";
 
 export async function getJobs() {
-  const clerkUser = await currentUser();
+  const context = await requireAuthenticatedContext();
+  const { supabase, memberships } = context;
 
-  if (!clerkUser) {
-    throw new Error("Unauthorized");
-  }
-
-  const supabase = createSupabaseServerClient();
-
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("clerk_user_id", clerkUser.id)
-    .maybeSingle();
-
-  const { data: membership } = await supabase
-    .from("memberships")
-    .select("*")
-    .eq("user_id", user?.id)
-    .maybeSingle();
-
-  if (!membership) {
+  // Preserve the existing behavior for users without an organization.
+  if (memberships.length === 0) {
     return [];
   }
 
-  const { data: jobs } = await supabase
+  // Do not silently select an arbitrary workspace.
+  if (memberships.length > 1) {
+    throw new Error(
+      "Multiple organization memberships found. An active organization must be selected."
+    );
+  }
+
+  const membership = memberships[0];
+
+  if (!membership.organization_id) {
+    return [];
+  }
+
+  const { data: jobs, error: jobsError } = await supabase
     .from("jobs")
     .select("*")
     .eq("organization_id", membership.organization_id)
     .order("created_at", { ascending: false });
+
+  if (jobsError) {
+    throw new Error("Unable to retrieve jobs for this workspace.");
+  }
 
   return jobs ?? [];
 }

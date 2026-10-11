@@ -21,98 +21,6 @@ export interface ComparisonCandidate {
   profileHref?: string;
 }
 
-const PREVIEW_CANDIDATES: ComparisonCandidate[] = [
-  {
-    id: "preview-taylor",
-    name: "Taylor Morgan",
-    email: "taylor.morgan@example.test",
-    score: 92,
-    skillScore: 96,
-    experienceScore: 88,
-    educationScore: 84,
-    certificationScore: 72,
-    domainScore: 90,
-    recommendation: "Strong alignment",
-    matchedSkills: [
-      "Python",
-      "FastAPI",
-      "PostgreSQL",
-      "Docker",
-      "AWS",
-    ],
-    missingSkills: ["Kubernetes", "Terraform"],
-    strengths: [
-      "Strong alignment with the core technical stack.",
-      "Relevant backend service experience.",
-      "Cloud deployment experience aligns with the role.",
-    ],
-    weaknesses: [
-      "Limited evidence of Kubernetes production ownership.",
-      "Terraform experience needs verification.",
-    ],
-  },
-  {
-    id: "preview-avery",
-    name: "Avery Shah",
-    email: "avery.shah@example.test",
-    score: 86,
-    skillScore: 91,
-    experienceScore: 81,
-    educationScore: 89,
-    certificationScore: 67,
-    domainScore: 94,
-    recommendation: "Strong alignment",
-    matchedSkills: [
-      "Python",
-      "Machine Learning",
-      "SQL",
-      "Docker",
-    ],
-    missingSkills: ["Advanced AWS", "Kubernetes", "Terraform"],
-    strengths: [
-      "Strong domain alignment.",
-      "Relevant machine learning and data experience.",
-      "Good overlap with the required technical skills.",
-    ],
-    weaknesses: [
-      "Cloud infrastructure depth should be explored.",
-      "Some preferred technologies are not evidenced.",
-    ],
-  },
-  {
-    id: "preview-jordan",
-    name: "Jordan Lee",
-    email: "jordan.lee@example.test",
-    score: 79,
-    skillScore: 82,
-    experienceScore: 90,
-    educationScore: 74,
-    certificationScore: 85,
-    domainScore: 76,
-    recommendation: "Needs further review",
-    matchedSkills: [
-      "Python",
-      "SQL",
-      "Docker",
-      "REST APIs",
-    ],
-    missingSkills: [
-      "Machine Learning",
-      "Advanced AWS",
-      "FastAPI",
-    ],
-    strengths: [
-      "Relevant engineering experience.",
-      "Strong practical backend foundations.",
-      "Good alignment with several core requirements.",
-    ],
-    weaknesses: [
-      "Some role-specific technical skills need verification.",
-      "Domain alignment requires further review.",
-    ],
-  },
-];
-
 type ScoreField =
   | "score"
   | "skillScore"
@@ -224,16 +132,9 @@ export default function CandidateComparisonWorkspace({
   jobTitle,
   candidates,
 }: Props) {
-  /*
-   * Sample profiles are used only to preview the comparison interface
-   * until there are at least two saved match records.
-   *
-   * They are never written to Supabase.
-   */
-  const previewMode = candidates.length < 2;
-  const availableCandidates = previewMode
-    ? PREVIEW_CANDIDATES
-    : candidates;
+  // Only use real candidates passed in by the saved-matches page.
+  // Never substitute fictional preview profiles.
+  const availableCandidates = candidates;
 
   const [selectedIds, setSelectedIds] = useState<string[]>(() =>
     availableCandidates.slice(0, 2).map((candidate) => candidate.id),
@@ -263,6 +164,9 @@ export default function CandidateComparisonWorkspace({
     );
   }
 
+  const hasCandidates = availableCandidates.length > 0;
+  const canCompare = selectedCandidates.length >= 2;
+
   return (
     <section className="compare-workspace">
       <header className="compare-heading">
@@ -282,120 +186,144 @@ export default function CandidateComparisonWorkspace({
 
         <span
           className={`compare-mode-badge ${
-            previewMode ? "compare-mode-preview" : "compare-mode-saved"
+            hasCandidates
+              ? "compare-mode-saved"
+              : "compare-mode-preview"
           }`}
         >
-          {previewMode ? "Interactive preview" : "Saved match data"}
+          {hasCandidates ? "Saved match data" : "No saved matches"}
         </span>
       </header>
-
-      {previewMode && (
-        <div className="compare-preview-notice">
-          <span className="compare-preview-icon">✦</span>
-          <div>
-            <strong>Sample data is being used</strong>
-            <p>
-              These fictional profiles demonstrate the comparison interface.
-              Their scores and recommendations are illustrative, are not
-              results for this job, and are not saved to your workspace.
-              Real comparisons will use saved match results.
-            </p>
-          </div>
-        </div>
-      )}
 
       <div className="compare-selection-heading">
         <div>
           <h3>Select profiles to compare</h3>
-          <p>Choose two or three candidates.</p>
+          <p>
+            {hasCandidates
+              ? `Choose up to three candidates. ${availableCandidates.length} saved ${
+                  availableCandidates.length === 1
+                    ? "candidate is"
+                    : "candidates are"
+                } available.`
+              : "Saved candidates will appear here after matching."}
+          </p>
         </div>
 
         <button
           type="button"
           className="btn btn-secondary btn-sm"
           onClick={resetSelection}
+          disabled={!hasCandidates}
         >
           Reset selection
         </button>
       </div>
 
-      <div className="compare-candidate-picker">
-        {availableCandidates.map((candidate, index) => {
-          const selected = selectedIds.includes(candidate.id);
-          const disabled =
-            !selected && selectedIds.length >= 3;
+      {hasCandidates ? (
+        <div className="compare-candidate-picker">
+          {availableCandidates.map((candidate, index) => {
+            const selected = selectedIds.includes(candidate.id);
+            const disabled =
+              !selected && selectedIds.length >= 3;
 
-          return (
-            <button
-              key={candidate.id}
-              type="button"
-              className={`compare-picker-card ${
-                selected ? "compare-picker-selected" : ""
-              }`}
-              onClick={() => toggleCandidate(candidate.id)}
-              aria-pressed={selected}
-              disabled={disabled}
-            >
-              <span className="compare-picker-top">
-                <span className="compare-avatar">
-                  {initials(candidate.name)}
+            return (
+              <button
+                key={candidate.id}
+                type="button"
+                className={`compare-picker-card ${
+                  selected ? "compare-picker-selected" : ""
+                }`}
+                onClick={() => toggleCandidate(candidate.id)}
+                aria-pressed={selected}
+                disabled={disabled}
+              >
+                <span className="compare-picker-top">
+                  <span className="compare-avatar">
+                    {initials(candidate.name)}
+                  </span>
+
+                  <span
+                    className={`compare-check ${
+                      selected ? "compare-check-selected" : ""
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {selected ? "✓" : ""}
+                  </span>
                 </span>
 
-                <span
-                  className={`compare-check ${
-                    selected ? "compare-check-selected" : ""
-                  }`}
-                  aria-hidden="true"
-                >
-                  {selected ? "✓" : ""}
-                </span>
-              </span>
-
-              <span className="compare-picker-name">
-                {candidate.name}
-              </span>
-
-              <span className="compare-picker-email">
-                {candidate.email || "Email unavailable"}
-              </span>
-
-              <span className="compare-picker-bottom">
-                <span>
-                  {candidate.score == null
-                    ? "Score unavailable"
-                    : `${candidate.score}% fit`}
+                <span className="compare-picker-name">
+                  {candidate.name}
                 </span>
 
-                <span className="compare-picker-rank">
-                  {selected ? "Selected" : `Profile ${index + 1}`}
+                <span className="compare-picker-email">
+                  {candidate.email || "Email unavailable"}
                 </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+
+                <span className="compare-picker-bottom">
+                  <span>
+                    {candidate.score == null
+                      ? "Score unavailable"
+                      : `${candidate.score}% fit`}
+                  </span>
+
+                  <span className="compare-picker-rank">
+                    {selected ? "Selected" : `Candidate ${index + 1}`}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="compare-insufficient">
+          <span className="compare-insufficient-icon">↔</span>
+          <strong>No saved candidates yet</strong>
+          <p>
+            Run matching for this job to populate the comparison workspace
+            with real candidate results.
+          </p>
+        </div>
+      )}
 
       <div className="compare-board-heading">
         <div>
           <h3>Side-by-side comparison</h3>
           <p>
-            {selectedCandidates.length} of 3 possible profiles selected
+            {selectedCandidates.length} of{" "}
+            {availableCandidates.length} available{" "}
+            {availableCandidates.length === 1
+              ? "candidate"
+              : "candidates"}{" "}
+            selected
           </p>
         </div>
 
-        {selectedCandidates.length >= 2 && (
+        {canCompare && (
           <span className="compare-board-status">
             {selectedCandidates.length} profiles
           </span>
         )}
       </div>
 
-      {selectedCandidates.length < 2 ? (
+      {!canCompare ? (
         <div className="compare-insufficient">
           <span className="compare-insufficient-icon">↔</span>
-          <strong>Choose at least two candidates</strong>
+
+          <strong>
+            {!hasCandidates
+              ? "No saved matches yet"
+              : availableCandidates.length === 1
+                ? "One saved match available"
+                : "Choose at least two candidates"}
+          </strong>
+
           <p>
-            Select another profile above to see the comparison.
+            {!hasCandidates
+              ? "Run matching for this job to see real candidate results here."
+              : availableCandidates.length === 1
+                ? "Match at least one more candidate to enable side-by-side comparison. Your existing saved result remains available in the leaderboard below."
+                : "Select at least two candidates above to compare their fit scores, skills, strengths, and recommendations."}
           </p>
         </div>
       ) : (
@@ -445,9 +373,10 @@ export default function CandidateComparisonWorkspace({
                           candidate.score == null
                             ? "#292930"
                             : `conic-gradient(#ff6129 ${
-                                candidate.score * 3.6
+                                clampScore(candidate.score) * 3.6
                               }deg, #292930 0deg)`,
                       }}
+                      role="img"
                       aria-label={
                         candidate.score == null
                           ? "Overall score unavailable"
@@ -457,7 +386,7 @@ export default function CandidateComparisonWorkspace({
                       <span>
                         {candidate.score == null
                           ? "—"
-                          : `${candidate.score}`}
+                          : candidate.score}
                       </span>
                     </div>
 
@@ -471,7 +400,7 @@ export default function CandidateComparisonWorkspace({
                     </div>
                   </div>
 
-                  {!previewMode && candidate.profileHref && (
+                  {candidate.profileHref && (
                     <Link
                       href={candidate.profileHref}
                       className="compare-profile-link"
@@ -509,8 +438,6 @@ export default function CandidateComparisonWorkspace({
         <p>
           Fit scores support recruiter judgment. Review the underlying skills,
           experience, and evidence instead of relying on a single number.
-          {previewMode &&
-            " The current comparison is a visual preview only."}
         </p>
       </footer>
     </section>
@@ -538,13 +465,14 @@ function renderCell(
           aria-label={row.label}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={score ?? 0}
+          aria-valuenow={score == null ? 0 : clampScore(score)}
+          aria-valuetext={
+            score == null ? "Not available" : `${score}%`
+          }
         >
           <span
             className={
-              score == null
-                ? "compare-progress-unavailable"
-                : ""
+              score == null ? "compare-progress-unavailable" : ""
             }
             style={{
               width: `${score == null ? 0 : clampScore(score)}%`,

@@ -4065,11 +4065,15 @@ a.match-candidate-name:hover {
   display: flex;
   align-items: center;
   flex-direction: column;
-  gap: 10px;
-  padding: 35px 20px;
-  border: 1px dashed #34343b;
-  border-radius: 11px;
-  background: #101013;
+  gap: 12px;
+  padding: 24px 20px;
+  border: 1px solid rgba(255, 97, 41, 0.25);
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 97, 41, 0.07),
+    #101013 75%
+  );
   text-align: center;
 }
 
@@ -4079,22 +4083,24 @@ a.match-candidate-name:hover {
   justify-content: center;
   width: 43px;
   height: 43px;
-  border: 1px solid rgba(255, 97, 41, 0.2);
+  border: 1px solid rgba(255, 97, 41, 0.25);
   border-radius: 12px;
   color: #ff986e;
-  background: rgba(255, 97, 41, 0.08);
+  background: rgba(255, 97, 41, 0.1);
   font-size: 21px;
 }
 
 .compare-insufficient strong {
-  color: #e4e4e7;
-  font-size: 12px;
+  color: #f4f4f5;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .compare-insufficient p {
+  max-width: 480px;
   margin: 0;
-  color: #85858f;
-  font-size: 10px;
+  color: #a1a1aa;
+  font-size: 12px;
   line-height: 1.7;
 }
 

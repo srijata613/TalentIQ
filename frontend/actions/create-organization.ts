@@ -1,7 +1,7 @@
 "use server";
 
 import { currentUser } from "@clerk/nextjs/server";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function createOrganization(name: string) {
   const clerkUser = await currentUser();
@@ -10,43 +10,35 @@ export async function createOrganization(name: string) {
     throw new Error("Unauthorized");
   }
 
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("clerk_user_id", clerkUser.id)
-    .maybeSingle();
+  const organizationName = name.trim();
 
-  if (!user) {
-    throw new Error("User not found");
+  if (
+    organizationName.length < 2 ||
+    organizationName.length > 120
+  ) {
+    throw new Error(
+      "Organization name must be between 2 and 120 characters."
+    );
   }
 
-  const slug = name
+  const slug = organizationName
     .toLowerCase()
     .replace(/\s+/g, "-");
 
-  const { data: organization, error: orgError } = await supabase
-    .from("organizations")
-    .insert({
-      name,
-      slug,
-    })
-    .select()
-    .single();
+  const supabase = createSupabaseServerClient();
 
-  if (orgError) {
-    throw orgError;
-  }
+  const { data: organization, error } = await supabase.rpc(
+    "create_organization",
+    {
+      p_name: organizationName,
+      p_slug: slug,
+    }
+  );
 
-  const { error: membershipError } = await supabase
-    .from("memberships")
-    .insert({
-      user_id: user.id,
-      organization_id: organization.id,
-      role: "owner",
-    });
-
-  if (membershipError) {
-    throw membershipError;
+  if (error) {
+    throw new Error(
+      `Failed to create organization: ${error.message}`
+    );
   }
 
   return organization;

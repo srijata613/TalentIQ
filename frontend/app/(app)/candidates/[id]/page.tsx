@@ -1,4 +1,7 @@
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import {
+  assertOrganizationAccess,
+  requireAuthenticatedContext,
+} from "@/lib/authorization";
 import AnalyzeCandidateButton from "@/components/analyze-candidate-button";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -11,13 +14,20 @@ export default async function CandidatePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createSupabaseServerClient();
+
+  const context = await requireAuthenticatedContext();
+  const { supabase } = context;
 
   const { data: candidate } = await supabase
     .from("candidates")
     .select("*")
     .eq("id", id)
-    .single();
+    .maybeSingle();
+
+  // Authorize access before rendering any candidate information.
+  if (candidate) {
+    assertOrganizationAccess(context, candidate.organization_id);
+  }
 
   if (!candidate) {
     return (
@@ -368,12 +378,6 @@ export default async function CandidatePage({
           <section className="glass workspace-panel candidate-record-card">
             <PanelHeader eyebrow="RECORD" title="Profile details" />
             <div className="workspace-detail-list">
-              <div className="workspace-detail-row">
-                <span>Record ID</span>
-                <strong title={String(candidate.id)}>
-                  {String(candidate.id).slice(0, 8)}…
-                </strong>
-              </div>
               <div className="workspace-detail-row">
                 <span>Status</span>
                 <strong>{status}</strong>

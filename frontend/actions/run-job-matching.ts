@@ -1,7 +1,12 @@
 "use server";
 
 import { API_BASE_URL } from "@/lib/api-config";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import {
+  assertOrganizationAccess,
+  requireAuthenticatedContext,
+} from "@/lib/authorization";
+import { auth, clerkClient } from "@clerk/nextjs/server";
+import { createClient } from "@supabase/supabase-js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -80,21 +85,32 @@ async function responseError(response: Response): Promise<string> {
 }
 
 export async function runJobMatching(jobId: string) {
-  if (!jobId.trim()) {
+  if (!jobId?.trim()) {
     throw new Error("A job must be selected before matching.");
   }
 
-  const supabase = createSupabaseServerClient();
+  // Preserve the request's authenticated session for the final writes.
+  const { sessionId } = await auth();
+
+  if (!sessionId) {
+    throw new Error("Unauthorized");
+  }
+
+  const context = await requireAuthenticatedContext();
+  const { supabase } = context;
 
   const { data: job, error: jobError } = await supabase
     .from("jobs")
-    .select("id, organization_id, title")
+    .select("id, organization_id")
     .eq("id", jobId)
-    .single();
+    .maybeSingle();
 
   if (jobError || !job) {
     throw new Error("Job not found or unavailable to this account.");
   }
+
+  // Verify workspace access before reading versions or candidates.
+  assertOrganizationAccess(context, job.organization_id);
 
   const { data: version, error: versionError } = await supabase
     .from("job_versions")
@@ -140,6 +156,7 @@ export async function runJobMatching(jobId: string) {
   }[] = [];
   const failures: string[] = [];
 
+  // Generate results first. Do not delete existing results while processing.
   for (const candidate of eligibleCandidates) {
     const candidateName =
       nonEmptyString(candidate.parsed_name) ?? "Unnamed candidate";
@@ -305,7 +322,29 @@ export async function runJobMatching(jobId: string) {
     throw new Error("No matching results were generated.");
   }
 
-  const { error: deleteError } = await supabase
+  /*
+   * Matching may take longer than a Clerk session JWT's short lifetime.
+   * Create a persistence client only after matching is complete and ask
+   * Clerk for a fresh JWT for each database request.
+   *
+   * This still uses the public Supabase key and normal RLS policies.
+   * It does not use or expose a service-role key.
+   */
+  const clerk = await clerkClient();
+
+  const persistenceSupabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      accessToken: async () => {
+        const tokenResult = await clerk.sessions.getToken(sessionId);
+        return tokenResult.jwt;
+      },
+    },
+  );
+
+  // Clear prior results only after every candidate has matched successfully.
+  const { error: deleteError } = await persistenceSupabase
     .from("candidate_matches")
     .delete()
     .eq("job_id", jobId);
@@ -316,7 +355,7 @@ export async function runJobMatching(jobId: string) {
     );
   }
 
-  const { error: insertError } = await supabase
+  const { error: insertError } = await persistenceSupabase
     .from("candidate_matches")
     .insert(rowsToInsert);
 

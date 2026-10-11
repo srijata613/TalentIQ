@@ -29,9 +29,14 @@ export default async function JobMatchesPage({
   const strongMatches = matches.filter((match: MatchRecord) => {
     const recommendation = String(
       match.recommendation ?? "",
-    ).toLowerCase();
+    )
+      .trim()
+      .toLowerCase();
 
-    return recommendation.includes("strong");
+    return (
+      recommendation.includes("strong") ||
+      recommendation === "hire"
+    );
   }).length;
 
   const averageScore = matches.length

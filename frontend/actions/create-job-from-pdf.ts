@@ -1,68 +1,44 @@
 "use server";
 
-import { currentUser } from "@clerk/nextjs/server";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { requireSingleOrganizationContext } from "@/lib/authorization";
 
 export async function createJobFromPdf(
   title: string,
   storagePath: string,
   fileName: string
 ) {
-  const clerkUser = await currentUser();
-
-  if (!clerkUser) {
-    throw new Error("Unauthorized");
+  if (!title?.trim()) {
+    throw new Error("A job title is required.");
   }
 
-  const supabase =
-    createSupabaseServerClient();
+  if (!storagePath?.trim()) {
+    throw new Error("A job-description storage path is required.");
+  }
 
-  const { data: user } =
-    await supabase
-      .from("users")
-      .select("*")
-      .eq(
-        "clerk_user_id",
-        clerkUser.id
-      )
-      .single();
+  if (!fileName?.trim()) {
+    throw new Error("A job-description file name is required.");
+  }
 
-  const { data: membership } =
-    await supabase
-      .from("memberships")
-      .select("*")
-      .eq(
-        "user_id",
-        user?.id
-      )
-      .single();
+  // Authenticate the user and verify their organization membership.
+  const { supabase, organizationId } =
+    await requireSingleOrganizationContext();
 
-  const { data: job, error } =
-    await supabase
-      .from("jobs")
-      .insert({
-        organization_id:
-          membership?.organization_id,
+  const { data: job, error } = await supabase
+    .from("jobs")
+    .insert({
+      organization_id: organizationId,
+      title: title.trim(),
+      status: "draft",
+      current_version: 1,
+      jd_storage_path: storagePath.trim(),
+      jd_file_name: fileName.trim(),
+      source: "pdf",
+    })
+    .select()
+    .single();
 
-        title,
-
-        status: "draft",
-
-        current_version: 1,
-
-        jd_storage_path:
-          storagePath,
-
-        jd_file_name:
-          fileName,
-
-        source: "pdf",
-      })
-      .select()
-      .single();
-
-  if (error) {
-    throw new Error(error.message);
+  if (error || !job) {
+    throw new Error("Unable to create the job record.");
   }
 
   return job;

@@ -1,10 +1,13 @@
+
 "use client";
 
 import { useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase-browser";
+import { useSupabaseBrowser } from "@/lib/supabase-browser";
 import { createCandidate } from "@/actions/create-candidate";
 
 export default function UploadResumeForm() {
+  const supabaseBrowser = useSupabaseBrowser();
+
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -14,46 +17,61 @@ export default function UploadResumeForm() {
     try {
       setLoading(true);
 
-      const fileName = `${Date.now()}-${file.name}`;
-
-      const {
-        error: uploadError,
-      } = await supabaseBrowser.storage
-        .from("resumes")
-        .upload(fileName, file);
-
-      if (uploadError) {
-        throw uploadError;
+      // Validate the selected file before uploading.
+      if (
+        file.type !== "application/pdf" ||
+        !file.name.toLowerCase().endsWith(".pdf")
+      ) {
+        throw new Error("Please select a valid PDF resume.");
       }
 
+      // Resolve the organization associated with the signed-in user.
       const {
-        data: signedUrlData,
-        error: signedUrlError,
-      } = await supabaseBrowser.storage
-        .from("resumes")
-        .createSignedUrl(fileName, 60);
+        data: organizationId,
+        error: organizationError,
+      } = await supabaseBrowser.rpc("current_app_organization_id");
 
-      if (signedUrlError || !signedUrlData?.signedUrl) {
+      if (organizationError || !organizationId) {
+        throw new Error("Unable to determine your organization.");
+      }
+
+      // Create a safe, unique path inside the organization's namespace.
+      const safeFileName = file.name.replace(
+        /[^a-zA-Z0-9._-]/g,
+        "_"
+      );
+
+      const storagePath =
+        `${organizationId}/${crypto.randomUUID()}-${safeFileName}`;
+
+      // Upload the resume to the private Storage bucket.
+      const { error: uploadError } = await supabaseBrowser.storage
+        .from("resumes")
+        .upload(storagePath, file, {
+          contentType: "application/pdf",
+          upsert: false,
+        });
+
+      if (uploadError) {
         throw new Error(
-          signedUrlError?.message ??
-          "Failed to generate signed URL"
+          `Resume upload failed: ${uploadError.message}`
         );
       }
 
+      // Save the original filename and exact Storage path.
       const candidate = await createCandidate(
         file.name,
-        fileName
+        storagePath
       );
 
       window.location.href = `/candidates/${candidate.id}`;
-
     } catch (err) {
-      console.error("UPLOAD ERROR:", err);
+      console.error("Resume upload failed.");
 
       alert(
         err instanceof Error
           ? err.message
-          : JSON.stringify(err)
+          : "An unexpected error occurred while uploading the resume."
       );
     } finally {
       setLoading(false);
@@ -63,20 +81,23 @@ export default function UploadResumeForm() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div>
-        <label className="form-label">Select Candidate Resume PDF</label>
+        <label className="form-label">
+          Select Candidate Resume PDF
+        </label>
+
         <input
           type="file"
-          accept=".pdf"
+          accept=".pdf,application/pdf"
           className="form-input"
           style={{ cursor: "pointer" }}
-          onChange={(e) =>
-            setFile(e.target.files?.[0] ?? null)
-          }
+          disabled={loading}
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
+          type="button"
           onClick={handleUpload}
           disabled={loading || !file}
           className="btn btn-primary"

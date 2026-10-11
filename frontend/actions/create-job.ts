@@ -1,57 +1,49 @@
 "use server";
 
-import { currentUser } from "@clerk/nextjs/server";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { requireSingleOrganizationContext } from "@/lib/authorization";
 
 export async function createJob(
   title: string,
   description: string
 ) {
-  const clerkUser = await currentUser();
-
-  if (!clerkUser) {
-    throw new Error("Unauthorized");
+  if (!title?.trim()) {
+    throw new Error("A job title is required.");
   }
 
-  const supabase = createSupabaseServerClient();
-
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("clerk_user_id", clerkUser.id)
-    .maybeSingle();
-
-  const { data: membership } = await supabase
-    .from("memberships")
-    .select("*")
-    .eq("user_id", user?.id)
-    .maybeSingle();
-
-  if (!membership) {
-    throw new Error("Organization not found");
+  if (!description?.trim()) {
+    throw new Error("A job description is required.");
   }
 
-  const { data: job, error } = await supabase
+  const { supabase, organizationId } =
+    await requireSingleOrganizationContext();
+
+  const { data: job, error: jobError } = await supabase
     .from("jobs")
     .insert({
-      organization_id: membership.organization_id,
-      title,
+      organization_id: organizationId,
+      title: title.trim(),
       content: description,
     })
     .select()
     .single();
 
-  if (error) {
-    throw error;
+  if (jobError || !job) {
+    throw new Error("Unable to create the job.");
   }
 
-  await supabase
+  const { error: versionError } = await supabase
     .from("job_versions")
     .insert({
       job_id: job.id,
       version_number: 1,
       content: description,
     });
+
+  if (versionError) {
+    throw new Error(
+      "The job was created, but its initial version could not be saved."
+    );
+  }
 
   return job;
 }

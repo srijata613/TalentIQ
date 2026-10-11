@@ -2,7 +2,8 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { syncUser } from "@/actions/sync-user";
+import { requireAuthenticatedContext } from "@/lib/authorization";
 import CreateOrganizationForm from "@/components/create-organization-form";
 import CandidateDirectory from "@/components/candidate-directory";
 import Icon from "@/components/icon";
@@ -13,21 +14,28 @@ export default async function CandidatesPage() {
   const clerkUser = await currentUser();
   if (!clerkUser) redirect("/sign-in");
 
-  const supabase = createSupabaseServerClient();
-  const { data: user } = await supabase.from("users").select("id").eq("clerk_user_id", clerkUser.id).maybeSingle();
-  const { data: membership } = await supabase.from("memberships").select("organization_id").eq("user_id", user?.id).maybeSingle();
+  await syncUser();
 
-  if (!membership) {
+  const { supabase, memberships } =
+    await requireAuthenticatedContext();
+
+  if (memberships.length > 1) {
     return (
       <div className="onboarding-page">
-        <div className="onboarding-mark"><Icon name="building" size={22} /></div>
-        <p className="eyebrow">Workspace setup</p>
-        <h1 className="page-title">Set up your organization first</h1>
-        <p className="page-subtitle">Your talent pool is scoped to an organization. Create your workspace to start adding candidates.</p>
-        <div className="glass page-form-panel"><CreateOrganizationForm /></div>
+        <div className="onboarding-mark">
+          <Icon name="building" size={22} />
+        </div>
+        <p className="eyebrow">Workspace selection</p>
+        <h1 className="page-title">Choose a workspace</h1>
+        <p className="page-subtitle">
+          Your account belongs to multiple organizations.
+          Workspace switching is not yet available on this page.
+        </p>
       </div>
     );
   }
+
+  const membership = memberships[0];
 
   const { data: candidates, error } = await supabase
     .from("candidates")
