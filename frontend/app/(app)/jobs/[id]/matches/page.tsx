@@ -1,11 +1,11 @@
 import { getJob } from "@/actions/get-job";
 import { getJobMatches } from "@/actions/get-job-matches";
+import { loadShortlistDecisions } from "@/actions/shortlist-decisions";
 import CandidateComparisonWorkspace from "@/components/candidate-comparison-workspace";
 import ScoreRing from "@/components/score-ring";
 import ScoreBar from "@/components/score-bar";
 import ShortlistReviewWorkspace from "@/components/shortlist-review-workspace";
 import RunMatchingButton from "@/components/run-matching-button";
-import { loadShortlistDecisions } from "@/actions/shortlist-decisions";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -29,9 +29,7 @@ export default async function JobMatchesPage({
   ]);
 
   const strongMatches = matches.filter((match: MatchRecord) => {
-    const recommendation = String(
-      match.recommendation ?? "",
-    )
+    const recommendation = String(match.recommendation ?? "")
       .trim()
       .toLowerCase();
 
@@ -221,16 +219,19 @@ export default async function JobMatchesPage({
         </div>
       </div>
 
-      {/* Phase 3A: interactive candidate comparison */}
+      {/* Interactive candidate comparison */}
       <CandidateComparisonWorkspace
         jobTitle={String(job.title || "Selected role")}
         candidates={comparisonCandidates}
       />
+
+      {/* Persistent recruiter decisions */}
       <ShortlistReviewWorkspace
         jobId={id}
         candidates={comparisonCandidates}
         initialDecisions={initialDecisions}
       />
+
       <section className="workspace-section">
         <div className="workspace-section-heading">
           <div>
@@ -337,7 +338,7 @@ export default async function JobMatchesPage({
                           <div className="match-candidate-copy">
                             {candidateId ? (
                               <Link
-                                href={`/candidates/${candidateId}`}
+                                href={`/candidates/${encodeURIComponent(candidateId)}`}
                                 className="match-candidate-name"
                               >
                                 {candidateName}
@@ -409,10 +410,10 @@ export default async function JobMatchesPage({
                             <div className="workspace-chip-list">
                               {matchedSkills
                                 .slice(0, 10)
-                                .map((skill) => (
+                                .map((skill, skillIndex) => (
                                   <span
                                     className="workspace-chip workspace-chip-brand"
-                                    key={skill}
+                                    key={`${skill}-${skillIndex}`}
                                   >
                                     {skill}
                                   </span>
@@ -439,10 +440,10 @@ export default async function JobMatchesPage({
                             <div className="workspace-chip-list">
                               {missingSkills
                                 .slice(0, 10)
-                                .map((skill) => (
+                                .map((skill, skillIndex) => (
                                   <span
                                     className="workspace-chip workspace-chip-muted"
-                                    key={skill}
+                                    key={`${skill}-${skillIndex}`}
                                   >
                                     {skill}
                                   </span>
@@ -467,8 +468,8 @@ export default async function JobMatchesPage({
                             <h4>Strengths</h4>
                             <ul>
                               {strengths.slice(0, 3).map(
-                                (item, index) => (
-                                  <li key={`${item}-${index}`}>
+                                (item, itemIndex) => (
+                                  <li key={`${item}-${itemIndex}`}>
                                     {item}
                                   </li>
                                 ),
@@ -482,8 +483,8 @@ export default async function JobMatchesPage({
                             <h4>Considerations</h4>
                             <ul>
                               {weaknesses.slice(0, 3).map(
-                                (item, index) => (
-                                  <li key={`${item}-${index}`}>
+                                (item, itemIndex) => (
+                                  <li key={`${item}-${itemIndex}`}>
                                     {item}
                                   </li>
                                 ),
@@ -500,13 +501,30 @@ export default async function JobMatchesPage({
                       </span>
 
                       {candidateId && (
-                        <Link
-                          href={`/candidates/${candidateId}`}
-                          className="btn btn-secondary btn-sm"
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                          }}
                         >
-                          View candidate{" "}
-                          <span aria-hidden="true">↗</span>
-                        </Link>
+                          <Link
+                            href={`/jobs/${id}/matches/interview/${encodeURIComponent(candidateId)}`}
+                            className="btn btn-primary btn-sm"
+                          >
+                            Prepare interview{" "}
+                            <span aria-hidden="true">↗</span>
+                          </Link>
+
+                          <Link
+                            href={`/candidates/${encodeURIComponent(candidateId)}`}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            View candidate{" "}
+                            <span aria-hidden="true">↗</span>
+                          </Link>
+                        </div>
                       )}
                     </div>
                   </article>
