@@ -1,15 +1,20 @@
-
 "use client";
 
 import Link from "next/link";
 import { useState } from "react";
+import {
+  clearShortlistDecisions,
+  saveShortlistDecision,
+  type ReviewDecision,
+} from "@/actions/shortlist-decisions";
 import type { ComparisonCandidate } from "@/components/candidate-comparison-workspace";
 
-type ReviewDecision = "shortlist" | "review" | "decline";
 type ReviewFilter = "all" | ReviewDecision | "pending";
 
 interface Props {
+  jobId: string;
   candidates: ComparisonCandidate[];
+  initialDecisions: Record<string, ReviewDecision>;
 }
 
 const DECISION_LABELS: Record<ReviewDecision, string> = {
@@ -18,13 +23,37 @@ const DECISION_LABELS: Record<ReviewDecision, string> = {
   decline: "Not shortlisted",
 };
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : "The request could not be completed. Please try again.";
+}
+
 export default function ShortlistReviewWorkspace({
+  jobId,
   candidates,
+  initialDecisions,
 }: Props) {
   const [decisions, setDecisions] = useState<
     Record<string, ReviewDecision>
-  >({});
+  >(initialDecisions);
+
   const [filter, setFilter] = useState<ReviewFilter>("all");
+
+  const [savingCandidates, setSavingCandidates] = useState<
+    Record<string, boolean>
+  >({});
+
+  const [resetting, setResetting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const savingCount = Object.values(savingCandidates).filter(
+    Boolean,
+  ).length;
+
+  const hasDecisions = Object.keys(decisions).length > 0;
+  const isBusy = resetting || savingCount > 0;
 
   const shortlistedCount = candidates.filter(
     (candidate) => decisions[candidate.id] === "shortlist",
@@ -38,7 +67,8 @@ export default function ShortlistReviewWorkspace({
     (candidate) => decisions[candidate.id] === "decline",
   ).length;
 
-  const pendingCount = candidates.length -
+  const pendingCount =
+    candidates.length -
     shortlistedCount -
     reviewCount -
     declinedCount;
@@ -46,22 +76,87 @@ export default function ShortlistReviewWorkspace({
   const visibleCandidates = candidates.filter((candidate) => {
     const decision = decisions[candidate.id];
 
-    return filter === "all" || decision === filter;
+    if (filter === "all") {
+      return true;
+    }
+
+    if (filter === "pending") {
+      return !decision;
+    }
+
+    return decision === filter;
   });
 
-  function setDecision(
+  async function handleDecision(
     candidateId: string,
     decision: ReviewDecision,
   ) {
-    setDecisions((current) => ({
+    if (isBusy) {
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+
+    setSavingCandidates((current) => ({
       ...current,
-      [candidateId]: decision,
+      [candidateId]: true,
     }));
+
+    try {
+      await saveShortlistDecision(jobId, candidateId, decision);
+
+      setDecisions((current) => ({
+        ...current,
+        [candidateId]: decision,
+      }));
+
+      setNotice(
+        `${DECISION_LABELS[decision]} decision saved to this workspace.`,
+      );
+    } catch (saveError) {
+      setError(errorMessage(saveError));
+    } finally {
+      setSavingCandidates((current) => ({
+        ...current,
+        [candidateId]: false,
+      }));
+    }
   }
 
-  function resetDecisions() {
-    setDecisions({});
-    setFilter("all");
+  async function resetDecisions() {
+    if (isBusy) {
+      return;
+    }
+
+    if (!hasDecisions) {
+      setFilter("all");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Clear all saved recruiter decisions for this job? This cannot be undone from the review page.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setResetting(true);
+
+    try {
+      await clearShortlistDecisions(jobId);
+
+      setDecisions({});
+      setFilter("all");
+      setNotice("Saved recruiter decisions were cleared.");
+    } catch (resetError) {
+      setError(errorMessage(resetError));
+    } finally {
+      setResetting(false);
+    }
   }
 
   return (
@@ -78,33 +173,63 @@ export default function ShortlistReviewWorkspace({
           </p>
         </div>
 
-        <span className="shortlist-draft-badge">
-          Draft · Not saved
+        <span className="shortlist-draft-badge" aria-live="polite">
+          {resetting
+            ? "Clearing decisions…"
+            : savingCount > 0
+              ? "Saving changes…"
+              : hasDecisions
+                ? "Saved to workspace"
+                : "No saved decisions"}
         </span>
       </header>
 
       <div className="shortlist-draft-notice">
         <span aria-hidden="true">ⓘ</span>
         <p>
-          These are temporary review decisions held in this page.
-          They are not written to the database or shared with other
-          users.
+          Recruiter decisions are saved for this job and shared with
+          authorized members of your workspace. They remain separate
+          from the matching engine&apos;s recommendation.
         </p>
       </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="shortlist-draft-notice"
+          style={{ borderLeft: "3px solid #ef4444" }}
+        >
+          <span aria-hidden="true">!</span>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {notice && !error && (
+        <div
+          role="status"
+          className="shortlist-draft-notice"
+        >
+          <span aria-hidden="true">✓</span>
+          <p>{notice}</p>
+        </div>
+      )}
 
       <div className="shortlist-summary-grid">
         <div className="shortlist-summary-card">
           <span>Awaiting review</span>
           <strong>{pendingCount}</strong>
         </div>
+
         <div className="shortlist-summary-card">
           <span>Shortlisted</span>
           <strong>{shortlistedCount}</strong>
         </div>
+
         <div className="shortlist-summary-card">
           <span>Keep in review</span>
           <strong>{reviewCount}</strong>
         </div>
+
         <div className="shortlist-summary-card">
           <span>Not shortlisted</span>
           <strong>{declinedCount}</strong>
@@ -135,10 +260,10 @@ export default function ShortlistReviewWorkspace({
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={resetDecisions}
-              disabled={Object.keys(decisions).length === 0}
+              onClick={() => void resetDecisions()}
+              disabled={isBusy || !hasDecisions}
             >
-              Reset decisions
+              {resetting ? "Clearing…" : "Reset decisions"}
             </button>
           </div>
 
@@ -163,6 +288,7 @@ export default function ShortlistReviewWorkspace({
                 }`}
                 onClick={() => setFilter(value)}
                 aria-pressed={filter === value}
+                disabled={isBusy}
               >
                 {label}
               </button>
@@ -175,8 +301,9 @@ export default function ShortlistReviewWorkspace({
             </div>
           ) : (
             <div className="shortlist-candidate-list">
-              {visibleCandidates.map((candidate, index) => {
+              {visibleCandidates.map((candidate) => {
                 const decision = decisions[candidate.id];
+                const isSaving = savingCandidates[candidate.id] === true;
 
                 return (
                   <article
@@ -212,9 +339,17 @@ export default function ShortlistReviewWorkspace({
                       </div>
 
                       <span
-                        className={`shortlist-decision-status shortlist-status-${decision}`}
+                        className={`shortlist-decision-status ${
+                          decision
+                            ? `shortlist-status-${decision}`
+                            : ""
+                        }`}
                       >
-                        {decision ? DECISION_LABELS[decision] : "Awaiting review"}
+                        {isSaving
+                          ? "Saving…"
+                          : decision
+                            ? DECISION_LABELS[decision]
+                            : "Awaiting review"}
                       </span>
                     </div>
 
@@ -229,9 +364,11 @@ export default function ShortlistReviewWorkspace({
                       <div className="shortlist-evidence">
                         <span>Matched skills</span>
                         <div className="shortlist-evidence-chips">
-                          {candidate.matchedSkills.slice(0, 5).map((skill) => (
-                            <span key={skill}>{skill}</span>
-                          ))}
+                          {candidate.matchedSkills
+                            .slice(0, 5)
+                            .map((skill) => (
+                              <span key={skill}>{skill}</span>
+                            ))}
                         </div>
                       </div>
                     )}
@@ -240,9 +377,11 @@ export default function ShortlistReviewWorkspace({
                       <div className="shortlist-evidence">
                         <span>Skills to review</span>
                         <div className="shortlist-evidence-chips shortlist-gaps">
-                          {candidate.missingSkills.slice(0, 5).map((skill) => (
-                            <span key={skill}>{skill}</span>
-                          ))}
+                          {candidate.missingSkills
+                            .slice(0, 5)
+                            .map((skill) => (
+                              <span key={skill}>{skill}</span>
+                            ))}
                         </div>
                       </div>
                     )}
@@ -264,9 +403,13 @@ export default function ShortlistReviewWorkspace({
                             decision === "shortlist" ? "is-active" : ""
                           }`}
                           onClick={() =>
-                            setDecision(candidate.id, "shortlist")
+                            void handleDecision(
+                              candidate.id,
+                              "shortlist",
+                            )
                           }
                           aria-pressed={decision === "shortlist"}
+                          disabled={isBusy}
                         >
                           Shortlist
                         </button>
@@ -276,8 +419,11 @@ export default function ShortlistReviewWorkspace({
                           className={`shortlist-action ${
                             decision === "review" ? "is-active" : ""
                           }`}
-                          onClick={() => setDecision(candidate.id, "review")}
+                          onClick={() =>
+                            void handleDecision(candidate.id, "review")
+                          }
                           aria-pressed={decision === "review"}
+                          disabled={isBusy}
                         >
                           Keep in review
                         </button>
@@ -287,8 +433,11 @@ export default function ShortlistReviewWorkspace({
                           className={`shortlist-action shortlist-action-decline ${
                             decision === "decline" ? "is-active" : ""
                           }`}
-                          onClick={() => setDecision(candidate.id, "decline")}
+                          onClick={() =>
+                            void handleDecision(candidate.id, "decline")
+                          }
                           aria-pressed={decision === "decline"}
+                          disabled={isBusy}
                         >
                           Do not shortlist
                         </button>
@@ -306,7 +455,7 @@ export default function ShortlistReviewWorkspace({
         <span aria-hidden="true">ⓘ</span>
         <p>
           Use match scores as supporting evidence, not as an automatic hiring
-          decision. Review the candidate's experience and qualifications
+          decision. Review the candidate&apos;s experience and qualifications
           before making a final decision.
         </p>
       </footer>
