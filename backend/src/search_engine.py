@@ -67,23 +67,23 @@ def matches_experience(
 
 def matches_certification(
     candidate: Dict,
-    certification: str
+    certification: str,
 ):
-
-    if not certification:
+    if not certification or not certification.strip():
         return True
 
+    requested_certification = certification.strip().lower()
+
     certs = [
-
-        c.lower()
-
-        for c in candidate.get(
-            "parsed_certifications",
-            []
-        )
+        item.strip().lower()
+        for item in candidate.get("parsed_certifications", [])
+        if isinstance(item, str)
     ]
 
-    return certification.lower() in certs
+    return any(
+        requested_certification in item
+        for item in certs
+    )
 
 
 def matches_fit(

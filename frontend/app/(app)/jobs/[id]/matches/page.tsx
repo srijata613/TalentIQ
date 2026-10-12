@@ -5,6 +5,7 @@ import ScoreRing from "@/components/score-ring";
 import ScoreBar from "@/components/score-bar";
 import ShortlistReviewWorkspace from "@/components/shortlist-review-workspace";
 import RunMatchingButton from "@/components/run-matching-button";
+import { loadShortlistDecisions } from "@/actions/shortlist-decisions";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -21,9 +22,10 @@ export default async function JobMatchesPage({
 }) {
   const { id } = await params;
 
-  const [{ job }, matches] = await Promise.all([
+  const [{ job }, matches, initialDecisions] = await Promise.all([
     getJob(id),
     getJobMatches(id),
+    loadShortlistDecisions(id),
   ]);
 
   const strongMatches = matches.filter((match: MatchRecord) => {
@@ -224,7 +226,11 @@ export default async function JobMatchesPage({
         jobTitle={String(job.title || "Selected role")}
         candidates={comparisonCandidates}
       />
-      <ShortlistReviewWorkspace candidates={comparisonCandidates} />
+      <ShortlistReviewWorkspace
+        jobId={id}
+        candidates={comparisonCandidates}
+        initialDecisions={initialDecisions}
+      />
       <section className="workspace-section">
         <div className="workspace-section-heading">
           <div>
